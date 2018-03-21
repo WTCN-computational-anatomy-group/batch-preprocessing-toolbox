@@ -1,17 +1,9 @@
-function browse_subjects(pth)
+function browse_subjects(pth,modality)
 folder    = dir(pth);
 folder    = folder(3:end);
 dirflag   = [folder.isdir];
 subfolder = folder(dirflag);
 S         = numel(subfolder);
-
-dir_scans = fullfile(pth,subfolder(1).name);     
-modality  = 'CT';
-
-scans = dir(fullfile(dir_scans,'*.nii'));
-if isempty(scans)
-    scans = dir(fullfile(dir_scans,'*.img'));
-end
 
 fname = {};
 cnt   = 1;
