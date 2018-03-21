@@ -192,7 +192,7 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
     
     if obj.preproc.do_skull_strip
         % Overwrite image data with skull-stripped versions
-        files = spm_select('FPList',dir_seg,'^c[1-3].*\.nii$');
+        files = spm_select('FPList',dir_seg,'^c[1,2,3].*\.nii$');
         V0    = spm_vol(files);
         K     = numel(V0);
         msk   = zeros(V0(1).dim,'single');
@@ -202,16 +202,16 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
             msk  = msk + resp;
         end
         clear resp
-
-        spm_imbasics('smooth_img_in_mem',msk,10);      
-        msk = msk>0.5;    
-
-        % Fill holes
-        msk = imfill(msk,6,'holes');    
+                                               
+        for z=1:V0(1).dim(3) % loop over slices
+            msk(:,:,z) = imgaussfilt(msk(:,:,z),1);    % Smooth
+            msk(:,:,z) = msk(:,:,z)>0.5;               % Threshold
+            msk(:,:,z) = imfill(msk(:,:,z),4,'holes'); % Fill holes
+        end
         
         if 0
             % For testing
-            split = 6;
+            split = 2;
             dm0   = V0(1).dim;
             nfigs = floor(dm0(3)/split);
             
@@ -222,6 +222,15 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
                 subplot(F1,F2,f);            
                 imagesc(msk(:,:,split*f)'); colormap(gray); axis off xy image;
             end
+            
+            figure(667);            
+            msk1 = permute(msk,[2 3 1]);
+            slice = msk1(:,:,floor(size(msk1,3)/2) + 1);
+            subplot(121); imagesc(slice'); colormap(gray); axis off xy;
+            
+            msk1 = permute(obj.scans{1}{1}.private.dat(:,:,:),[2 3 1]);
+            slice = msk1(:,:,floor(size(msk1,3)/2) + 1);
+            subplot(122); imagesc(slice',[0 100]); colormap(gray); axis off xy;
         end
         
         for n=1:N          
