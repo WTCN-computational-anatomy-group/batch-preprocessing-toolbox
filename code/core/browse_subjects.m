@@ -6,35 +6,28 @@ subfolder = folder(dirflag);
 S         = numel(subfolder);
 
 dir_scans = fullfile(pth,subfolder(1).name);     
+modality  = 'CT';
 
 scans = dir(fullfile(dir_scans,'*.nii'));
 if isempty(scans)
     scans = dir(fullfile(dir_scans,'*.img'));
 end
 
-N = numel(scans);
-V = cell(1,S);
+fname = {};
+cnt   = 1;
 for s=1:S
-    dir_scans = fullfile(pth,subfolder(s).name);        
+    dir_scans = fullfile(pth,subfolder(s).name,'scans',modality);        
 
     scans = dir(fullfile(dir_scans,'*.nii'));
     if isempty(scans)
         scans = dir(fullfile(dir_scans,'*.img'));
     end
 
-    for n=1:N
-        V{s}(n) = spm_vol(fullfile(dir_scans,scans(n).name));
-    end              
-end 
-
-fname = cell(1,N*S);
-cnt   = 1;
-for s=1:S
-    for n=1:N
-        fname{cnt} = V{s}(n).fname;
+    if ~isempty(scans)
+        fname{cnt} = fullfile(dir_scans,scans(1).name);       
         cnt        = cnt + 1;
     end
-end
+end 
 
 spm_check_registration(char(fname));
 %==========================================================================
