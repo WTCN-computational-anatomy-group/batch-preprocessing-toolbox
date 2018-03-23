@@ -41,6 +41,46 @@ if ~isempty(obj.labels)
     obj.labels.fname = nfname;
 end
 
+% Rigidly realign to MNI space
+%--------------------------------------------------------------------------
+if obj.preproc.do_realign2mni    
+    
+    if strcmp(obj.modality,'CT')
+        % Reset the origin (only if CT)
+        V = obj.scans{1}{1}; 
+        
+        spm_impreproc('nm_reorient',V.fname,vxsize(V.mat),1,'ro_');    
+    
+        [pth,nam,ext]   = fileparts(V.fname);
+        delete(V.fname);
+        nfname          = fullfile(pth,['ro_' nam ext]);
+        obj.scans{1}{1} = spm_vol(nfname);
+        
+        V = obj.scans{1}{1}; 
+        spm_impreproc('reset_origin',V.fname);
+        obj.scans{1}{1} = spm_vol(nfname);
+    end
+    
+    % Just align the first image  
+    V               = obj.scans{1}{1}; 
+    M               = spm_impreproc('rigid_align',V.fname);                     
+    obj.scans{1}{1} = spm_vol(V.fname);                 
+    
+    % Then change orientation matrices of the rest accordingly
+    for n=1:N
+        I = numel(obj.scans{n});
+        for i=1:I            
+            if n==1 && i==1
+                continue;
+            end
+            
+            V = obj.scans{n}{i};
+            spm_get_space(V.fname,M\V.mat);  
+            obj.scans{n}{i} = spm_vol(V.fname);  
+        end
+    end    
+end               
+
 % Remove image data outside of the head (air..)
 %--------------------------------------------------------------------------
 if obj.preproc.do_crop
@@ -60,6 +100,30 @@ if obj.preproc.do_crop
         end
     end    
 end  
+
+% Co-register images
+%--------------------------------------------------------------------------
+if obj.preproc.do_coreg && N>1
+    cnt = 1;
+    for n=1:N
+        I = numel(obj.scans{n});
+        for i=1:I
+            V(cnt) = obj.scans{n}{i};            
+            cnt    = cnt + 1;
+        end
+    end  
+    
+    V = spm_impreproc('coreg',V);
+    
+    cnt = 1;
+    for n=1:N
+        I = numel(obj.scans{n});
+        for i=1:I
+            obj.scans{n}{i} = V(cnt);            
+            cnt             = cnt + 1;
+        end
+    end  
+end
 
 % Denoise images
 %--------------------------------------------------------------------------
@@ -102,52 +166,35 @@ if ~isempty(obj.preproc.vx)
     end  
 end
 
-% Rigidly realign to MNI space
+% Simple normalisation of image intensities
 %--------------------------------------------------------------------------
-if obj.preproc.do_realign2mni  
-    % Just align the first image
-    V               = obj.scans{1}{1};            
-    M               = spm_impreproc('rigid_align',V.fname);                     
-    obj.scans{1}{1} = spm_vol(V.fname);    
-         
-    % Then change orientation matrices of the rest accordingly
+if obj.preproc.normalise_intensities    
     for n=1:N
-        I = numel(obj.scans{n});
-        for i=1:I            
-            if n==1 && i==1
-                continue;
-            end
-            
-            V = obj.scans{n}{i};
-            spm_get_space(V.fname,M\V.mat);  
-            obj.scans{n}{i} = spm_vol(V.fname);  
-        end
-    end    
-end               
+        V         = obj.scans{n}{1};   
+        Nii       = nifti(V.fname);
+        img       = single(Nii.dat(:,:,:));
+        msk       = msk_modality(img,obj.modality);        
+        
+        sint = sum(reshape(img(msk),[],1));
+        nm   = nnz(msk);        
+        scl  = (1024/(sint/nm));
+        
+        [pth,nam,ext] = fileparts(V.fname);
+        nfname        = fullfile(pth,['ni_' nam ext]);
 
-% Co-register images
-%--------------------------------------------------------------------------
-if obj.preproc.do_coreg && N>1
-    cnt = 1;
-    for n=1:N
-        I = numel(obj.scans{n});
-        for i=1:I
-            V(cnt) = obj.scans{n}{i};            
-            cnt    = cnt + 1;
-        end
-    end  
-    
-    V = spm_impreproc('coreg',V);
-    
-    cnt = 1;
-    for n=1:N
-        I = numel(obj.scans{n});
-        for i=1:I
-            obj.scans{n}{i} = V(cnt);            
-            cnt             = cnt + 1;
-        end
-    end  
-end
+        Nii         = nifti;
+        Nii.dat     = file_array(nfname,V.dim,V.dt,0,1,0);
+        Nii.mat     = V.mat;
+        Nii.mat0    = V.mat;
+        Nii.descrip = 'norm-int';
+        create(Nii);
+                   
+        Nii.dat(:,:,:) = scl*img;
+
+        obj.scans{n}{1} = spm_vol(nfname);
+        delete(V.fname)
+    end      
+end                  
 
 % Segment and/or bias-field correct and/or skull-strip
 %--------------------------------------------------------------------------
@@ -171,20 +218,36 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
         write_tc(1:3,1) = true;
     end
     
-    segment_subject(V,write_tc,write_bf,write_df,dir_seg);
+    segment_subject(V,write_tc,write_bf,write_df,dir_seg,obj.modality);
        
     if obj.preproc.do_bf_correct
-        % Overwrite image data with bias-corrected versions
-        files = spm_select('FPList',dir_seg,'^m.*\.nii$');
+        % Replace data with bias-corrected versions
+        files = spm_select('FPList',dir_seg,'^m.*\.nii$'); % Get bias-field corrected images
         for n=1:N          
-            fname   = obj.scans{n}{1}.fname;            
-            Nii     = nifti(fname);
+            fname   = obj.scans{n}{1}.fname;                        
             [~,nam] = fileparts(fname);
             for n1=1:N
                 [~,nam_bf] = fileparts(files(n1,:));
                 if strcmp(nam,nam_bf(2:end))
-                    Nii_bf         = nifti(files(n1,:));
-                    Nii.dat(:,:,:) = Nii_bf.dat(:,:,:);
+                    fname_bf = files(n1,:);
+                    V_bf     = spm_vol(fname_bf);
+                    
+                    [pth,nam,ext] = fileparts(fname);
+                    nfname        = fullfile(pth,['bf_' nam ext]);
+
+                    Nii         = nifti;
+                    Nii.dat     = file_array(nfname,V_bf.dim,V_bf.dt,0,1,0);
+                    Nii.mat     = V_bf.mat;
+                    Nii.mat0    = V_bf.mat;
+                    Nii.descrip = 'bf-corrected';
+                    create(Nii);
+
+                    Nii1           = nifti(fname_bf);
+                    img            = single(Nii1.dat(:,:,:));                    
+                    Nii.dat(:,:,:) = img;
+                    
+                    obj.scans{n}{1} = spm_vol(nfname);
+                    delete(fname)
                 end
             end  
         end
@@ -204,14 +267,16 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
         clear resp
                                                
         for z=1:V0(1).dim(3) % loop over slices
-            msk(:,:,z) = imgaussfilt(msk(:,:,z),1);    % Smooth
-            msk(:,:,z) = msk(:,:,z)>0.5;               % Threshold
+            msk(:,:,z) = msk(:,:,z)>0.2;               % Threshold
             msk(:,:,z) = imfill(msk(:,:,z),4,'holes'); % Fill holes
+
+            msk(:,:,z) = imgaussfilt(msk(:,:,z),1);    % Smooth
+            msk(:,:,z) = msk(:,:,z)>0.8;               % Threshold
         end
         
         if 0
-            % For testing
-            split = 2;
+            % For testing skull-stripping
+            split = 4;
             dm0   = V0(1).dim;
             nfigs = floor(dm0(3)/split);
             
@@ -233,53 +298,69 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
             subplot(122); imagesc(slice',[0 100]); colormap(gray); axis off xy;
         end
         
-        for n=1:N          
-            fname          = obj.scans{n}{1}.fname;            
-            Nii            = nifti(fname);
-            img            = single(Nii.dat(:,:,:));
-            img(~msk)      = NaN;               
+        for n=1:N
+            fname         = obj.scans{n}{1}.fname;  
+            [pth,nam,ext] = fileparts(fname);
+            nfname        = fullfile(pth,['ss_' nam ext]);
+
+            Nii         = nifti;
+            Nii.dat     = file_array(nfname,obj.scans{n}{1}.dim,[16 0],0,1,0);
+            Nii.mat     = obj.scans{n}{1}.mat;
+            Nii.mat0    = obj.scans{n}{1}.mat;
+            Nii.descrip = 'skull-stripped';
+            create(Nii);
+
+            Nii1           = nifti(fname);
+            img            = single(Nii1.dat(:,:,:));
+            img(~msk)      = NaN;  
             Nii.dat(:,:,:) = img;
-        end  
+            
+            obj.scans{n}{1} = spm_vol(nfname);
+            delete(fname);
+        end
     end  
     
     if obj.preproc.make_ml_labels && isempty(obj.labels)
         % Write maximum-likelihoods labels (only if labels are not available)                
         files = spm_select('FPList',dir_seg,'^c.*\.nii$');
-        V0    = spm_vol(files);
-        K     = numel(V0);
-        img   = zeros([V0(1).dim K],'single');
-        for k=1:K
-            Nii          = nifti(V0(k).fname);
-            img(:,:,:,k) = single(Nii.dat(:,:,:));
+        
+        if ~isempty(files)
+            V0    = spm_vol(files);
+            K     = numel(V0);
+            img   = zeros([V0(1).dim K],'single');
+            for k=1:K
+                Nii          = nifti(V0(k).fname);
+                img(:,:,:,k) = single(Nii.dat(:,:,:));
+            end
+
+            if K<6
+                % Less than the default SPM template number of classes requested
+                % -> correct ML labels
+                img1 = ones(V0(1).dim,'single');
+                img1 = img1 - sum(img,4);
+                img  = cat(4,img,img1);
+                clear img1
+            end
+
+            [~,ml_labels] = max(img,[],4);        
+            clear img
+
+            fname       = obj.scans{1}{1}.fname;  
+            [~,nam,ext] = fileparts(fname);
+            nfname      = fullfile(dir_labels,['ml_' nam ext]);
+
+            Nii      = nifti;
+            Nii.dat  = file_array(nfname,size(ml_labels),'uint8',0,1/K,0);
+            Nii.mat  = V0(1).mat;
+            Nii.mat0 = V0(1).mat;
+            Nii.descrip = 'ML-labels';
+            create(Nii);
+
+            Nii.dat(:,:,:) = ml_labels;
+            clear ml_labels
+
+            obj.labels = spm_vol(nfname);
         end
-                
-        if K<6
-            % Less than the default SPM template number of classes requested
-            % -> correct ML labels
-            img1 = ones(V0(1).dim,'single');
-            img1 = img1 - sum(img,4);
-            img  = cat(4,img,img1);
-            clear img1
-        end
-        
-        [~,ml_labels] = max(img,[],4);        
-        clear img
-         
-        fname       = obj.scans{1}{1}.fname;  
-        [~,nam,ext] = fileparts(fname);
-        nfname      = fullfile(dir_labels,['ml-' nam ext]);
-        
-        Nii      = nifti;
-        Nii.dat  = file_array(nfname,size(ml_labels),'uint8',0,1/K,0);
-        Nii.mat  = V0(1).mat;
-        Nii.mat0 = V0(1).mat;
-        Nii.descrip = 'ML-labels';
-        create(Nii);
-        
-        Nii.dat(:,:,:) = ml_labels;
-        clear ml_labels
-        
-        obj.labels = spm_vol(nfname);
     end
     
     % Clean-up

@@ -1,17 +1,17 @@
-function [tau,lambda] = estimate_model_parameters(V,modality)
+function [tau,lambda] = estimate_model_parameters(V,modality,lambda_ct)
 N = numel(V);
 
 % Estimate noise precision (tau)
 if strcmp(modality,'CT')
-    vx0 = vxsize(V{1}{1}.mat);
-    img = get_img(V,1,1,modality);
-    
-    SmoSuf = ComputeSmoSuf_Gauss(img,[],vx0,modality);
-    fwhm   = sqrt(4*log(2)*(SmoSuf(2)/SmoSuf(1))/(sum(SmoSuf([4 6 8]))/sum(SmoSuf([3 5 7]))));
-    fwhm   = sqrt(max(fwhm^2 - 0.5, 4*log(2)/pi)); 
-    ff     = compute_ff_Gauss(fwhm,vx0); 
-    tau    = {1/ff};   
+    % Data is CT
+    %----------------------------------------------------------------------
+    vx0 = vxsize(V{1}{1}.mat);    
+    f0  = get_img(V,1,1,modality);           
+    tau = estimate_ct_tau(f0,[],vx0);
+    tau = {tau};
 else
+    % Data is MRI
+    %----------------------------------------------------------------------
     tau = cell(1,N);
     for n=1:N
         I    = numel(V{n});
@@ -39,8 +39,12 @@ end
 
 % Set regularisation parameter (lambda)
 if strcmp(modality,'CT')
-    lambda = 1e-2;
+    % Data is CT
+    %----------------------------------------------------------------------
+    lambda = lambda_ct;
 else
+    % Data is MRI
+    %----------------------------------------------------------------------
     k      = 0.4878; % Approximated from IXI high-res images
     lambda = zeros([N 1],'single');    
     for n=1:N        

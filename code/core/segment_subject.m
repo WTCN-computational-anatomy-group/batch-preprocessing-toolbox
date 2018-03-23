@@ -1,18 +1,25 @@
-function segment_subject(V,write_tc,write_bf,write_df,dir_out)
+function segment_subject(V,write_tc,write_bf,write_df,dir_out,modality)
 N = numel(V);
 
 obj          = struct;
 obj.bb       = NaN(2,3);
 obj.bb       = [-90 -126 -72; 90 90 108];
 obj.vox      = 2;
-obj.cleanup  = 1;
-obj.mrf      = 2;
 obj.affreg   = 'mni';
 obj.reg      = [0 0.001 0.5 0.05 0.2]*0.1;
 obj.fwhm     = 1;
 obj.samp     = 4;
-obj.biasreg  = 0.001*(1/5)*ones(1,N);
 obj.biasfwhm = 60*ones(1,N);
+
+if strcmp(modality,'CT')
+    obj.biasreg  = 10;
+    obj.cleanup  = 0;
+    obj.mrf      = 0;    
+elseif strcmp(modality,'MRI')
+    obj.biasreg  = 1e-3*(1/5)*ones(1,N);
+    obj.cleanup  = 1;
+    obj.mrf      = 2;
+end
 
 tpmname   = fullfile(spm('dir'),'tpm','TPM.nii');
 obj.lkp   = 1:6;

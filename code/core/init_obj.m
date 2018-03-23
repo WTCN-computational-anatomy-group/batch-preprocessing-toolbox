@@ -40,7 +40,10 @@ for m=1:M
         end          
         if pars.dat{m}.preproc.do_skull_strip
             dir_preproc{end - 3} = [dir_preproc{end - 3} '-ss'];
-        end        
+        end  
+        if pars.dat{m}.preproc.normalise_intensities
+            dir_preproc{end - 3} = [dir_preproc{end - 3} '-ni'];
+        end   
         dir_preproc_2d = fullfile('/',dir_preproc{2:end - 4},['2d_' dir_preproc{end - 3}]);
         dir_preproc    = fullfile('/',dir_preproc{2:end - 3});    
     else                

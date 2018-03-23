@@ -8,6 +8,7 @@ function [ff,s] = compute_ff_Gauss(fwhm,vx,sk)
 % Gaussian. Letting s2 = 2/sqrt(2), this is equal to
 % (4*pi*s^2)^(-1/2)*(2*pi*s2^2)^(-1/2)*exp(-0.5*x.^2/s2^2), from which
 % the (4*pi*s^2)^(-1/2) factor comes from.
+if nargin<2, vx = [1 1 1]; end
 if nargin<3, sk = [1 1 1]; end
 
 fwhm = fwhm + mean(vx); 

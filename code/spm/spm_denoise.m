@@ -5,24 +5,23 @@ function obj = spm_denoise(obj)
 V         = obj.scans;
 N         = numel(V);
 vx        = vxsize(V{1}{1}.mat);
-pars_admm = obj.preproc.denoise.admm;
+pars_den  = obj.preproc.denoise;
+pars_admm = pars_den.admm;
 
 % Initialise variables
 %--------------------------------------------------------------------------
+
+% Estimate model parameters (tau,lambda)
+[tau,lambda] = estimate_model_parameters(V,obj.modality,pars_den.lambda_ct);
+tau          = cell2mat(tau);
+
+% Image data
 X   = cell(1,N);
 msk = cell(1,N);
 for n=1:N
-   X{n}{1}          = single(V{n}{1}.private.dat(:,:,:)); % Observed data
-   msk{n}           = msk_modality(X{n}{1},obj.modality); % Mask
-   X{n}{1}(~msk{n}) = NaN;
-end
-
-% Estimate model parameters (tau,lambda)
-[tau,lambda] = estimate_model_parameters(X,V,obj.modality);
-tau          = cell2mat(tau);
-
-for n=1:N
-    X{n} = X{n}{1};
+   X{n}          = single(V{n}{1}.private.dat(:,:,:)); % Observed data
+   msk{n}        = msk_modality(X{n},obj.modality); % Mask
+   X{n}(~msk{n}) = NaN;
 end
 
 % Run algorithm
@@ -34,7 +33,7 @@ for n=1:N
    Yhat{n}(~msk{n}) = NaN;
 end
 
-% Make integer
+% Make integer again
 for n=1:N
     Yhat{n} = round(Yhat{n});
     if strcmp(obj.modality,'MRI')
@@ -62,7 +61,8 @@ for n=1:N
     cnt         = cnt + 1;
 end
 
-if obj.preproc.denoise.verbose
+if pars_den.verbose
+    % Visualise result
     if V{1}{1}.dim(3)>1
         spm_check_registration(char(fnames))
     else               
@@ -87,6 +87,7 @@ if obj.preproc.denoise.verbose
     end
 end
 
+% Delete input data
 for n=1:N
     obj.scans{n}    = {};
     obj.scans{n}{1} = V1(n);
@@ -101,7 +102,7 @@ end
 %==========================================================================
 function Y = admm_denoising(X,tau,lambda,vx,pars)
 
-% Set parameters
+% Set parametersWrite results
 %--------------------------------------------------------------------------
 niter   = pars.niter;
 tol     = pars.tol;
@@ -109,6 +110,8 @@ rho     = single(pars.rho);
 verbose = pars.verbose;
 mu      = pars.mu;
 alpha   = pars.alpha;
+est_rho = pars.est_rho;
+est_tau = pars.est_tau;
 
 dm = size(X{1});
 if numel(dm)==2, dm(3) = 1; end
@@ -172,6 +175,11 @@ end
 ll = -Inf;
 for iter=1:niter
        
+    if est_tau
+        % Re-estimates tau parameter based on residual (only if CT)
+        tau = estimate_ct_tau(X{n},Y{n},vx);
+    end
+
     %----------------------------------------------------------------------
     % Sub-problem U
     oU    = U;
@@ -236,7 +244,7 @@ for iter=1:niter
     d1 = abs((ll(end - 1)*(1 + 10*eps) - ll(end))/ll(end));
     
     if verbose
-        fprintf('%2d | %8.7f %8.7f %8.7f\n',iter,ll1,d1,rho);
+        fprintf('%2d | %8.7f %8.7f %8.7f %8.7f\n',iter,ll1,d1,rho,tau);
     end    
     
     if iter>=20 && d1<tol
@@ -244,42 +252,44 @@ for iter=1:niter
         break; 
     end      
     
-    % Compute primal and dual residuals
-    %----------------------------------------------------------------------
-    primal_res = 0;
-    dual_res   = 0;
-    for n=1:N
-        tmp = cell(1,ndm);
-        for d=1:ndm
-            primal_res = primal_res + sum(sum(sum((D{n,d} + U{n,d}).^2)));
-            tmp{d}     = U{n,d} - oU{n,d};
-        end
-        if ndm==3
-            tmp = rho*spm_imbasics('dive',tmp{:},vx);
-        else
-            tmp = rho*spm_imbasics('dive',tmp{:},[],vx);
-        end
-        dual_res = dual_res + sum(sum(sum(tmp.^2)));
-    end
-    clear tmp
-    
-    primal_res = sqrt(primal_res);
-    dual_res   = sqrt(dual_res);
-    
-    % Compute varying penalty parameter
-    %----------------------------------------------------------------------
-    scale = 1;
-    if primal_res>mu*dual_res
-        rho   = alpha*rho;
-        scale = 1/alpha;
-    elseif dual_res>mu*primal_res
-        rho   = rho/alpha;
-        scale = alpha;
-    end
-    if scale~=1
+    if est_rho
+        % Compute primal and dual residuals
+        %------------------------------------------------------------------
+        primal_res = 0;
+        dual_res   = 0;
         for n=1:N
+            tmp = cell(1,ndm);
             for d=1:ndm
-                W{n,d} = W{n,d}*scale;
+                primal_res = primal_res + sum(sum(sum((D{n,d} + U{n,d}).^2)));
+                tmp{d}     = U{n,d} - oU{n,d};
+            end
+            if ndm==3
+                tmp = rho*spm_imbasics('dive',tmp{:},vx);
+            else
+                tmp = rho*spm_imbasics('dive',tmp{:},[],vx);
+            end
+            dual_res = dual_res + sum(sum(sum(tmp.^2)));
+        end
+        clear tmp
+
+        primal_res = sqrt(primal_res);
+        dual_res   = sqrt(dual_res);
+
+        % Compute varying penalty parameter
+        %------------------------------------------------------------------
+        scale = 1;
+        if primal_res>mu*dual_res
+            rho   = alpha*rho;
+            scale = 1/alpha;
+        elseif dual_res>mu*primal_res
+            rho   = rho/alpha;
+            scale = alpha;
+        end
+        if scale~=1
+            for n=1:N
+                for d=1:ndm
+                    W{n,d} = W{n,d}*scale;
+                end
             end
         end
     end

@@ -5,9 +5,10 @@ function obj = spm_superres(obj)
 vx1       = obj.preproc.superres.vx;
 V         = obj.scans;
 N         = numel(V);
-pars_admm = obj.preproc.superres.admm;
-proj_mat  = obj.preproc.superres.proj_mat;
-trunc_ct  = obj.preproc.superres.trunc_ct;
+pars_sr   = obj.preproc.superres;
+pars_admm = pars_sr.admm;
+proj_mat  = pars_sr.proj_mat;
+trunc_ct  = pars_sr.trunc_ct;
 
 % Initialise
 %--------------------------------------------------------------------------
@@ -45,9 +46,9 @@ else
     d   = vx0./vx1;
     D   = diag([d 1]);
     
-    M1          = M0/D;
-    dm1         = floor(D(1:3,1:3)*dm0')';
-    dm1(dm1==0) = 1;
+    M1     = M0/D;
+    dm1    = floor(D(1:3,1:3)*dm0')';
+    dm1(3) = 1;
 end
 
 % Initialise projection matrices (A)
@@ -95,7 +96,8 @@ for n=1:N
     cnt         = cnt + 1;
 end
 
-if obj.preproc.superres.verbose
+if pars_sr.verbose
+    % Visualise result
     if V{1}{1}.dim(3)>1
         spm_check_registration(char(fnames))
     else               
@@ -120,6 +122,7 @@ if obj.preproc.superres.verbose
     end
 end
 
+% Delete input data
 for n=1:N
     obj.scans{n}    = {};
     obj.scans{n}{1} = V1(n);

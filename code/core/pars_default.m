@@ -73,7 +73,7 @@ for m=1:M
         pars.dat{m}.preproc.vx = [];
     end
     if ~isfield(pars.dat{m}.preproc,'write_tc')
-        pars.dat{m}.preproc.write_tc = false(6,4);        
+        pars.dat{m}.preproc.write_tc = [false(6,1) false(6,1) false(6,1) false(6,1)];        
     end    
     if ~isfield(pars.dat{m}.preproc,'do_bf_correct')
         pars.dat{m}.preproc.do_bf_correct = false;        
@@ -86,6 +86,9 @@ for m=1:M
     end    
     if ~isfield(pars.dat{m}.preproc,'make_ml_labels')
         pars.dat{m}.preproc.make_ml_labels = false;
+    end 
+    if ~isfield(pars.dat{m}.preproc,'normalise_intensities')
+        pars.dat{m}.preproc.normalise_intensities = false;
     end 
     
     % Super-resolution parameters
@@ -110,7 +113,7 @@ for m=1:M
         pars.dat{m}.preproc.superres.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.superres.admm,'rho')
-        pars.dat{m}.preproc.superres.admm.rho = 1e5;
+        pars.dat{m}.preproc.superres.admm.rho = 1;
     end        
     if ~isfield(pars.dat{m}.preproc.superres.admm,'niter')
         pars.dat{m}.preproc.superres.admm.niter = 50;
@@ -134,7 +137,7 @@ for m=1:M
         pars.dat{m}.preproc.superres.admm.cgs_tol = 1e-3;
     end   
     if ~isfield(pars.dat{m}.preproc.superres.admm,'est_rho')
-        pars.dat{m}.preproc.superres.admm.est_rho = true;
+        pars.dat{m}.preproc.superres.admm.est_rho = false;
     end       
     
     % Denoising parameters
@@ -145,12 +148,15 @@ for m=1:M
     if ~isfield(pars.dat{m}.preproc.denoise,'verbose')
         pars.dat{m}.preproc.denoise.verbose = false;
     end    
+    if ~isfield(pars.dat{m}.preproc.denoise,'lambda_ct')
+        pars.dat{m}.preproc.denoise.lambda_ct = 1e-2;
+    end    
     
     if ~isfield(pars.dat{m}.preproc.denoise,'admm')
         pars.dat{m}.preproc.denoise.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 1e5;
+        pars.dat{m}.preproc.denoise.admm.rho = 1;
     end        
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
         pars.dat{m}.preproc.denoise.admm.niter = 100;
@@ -168,7 +174,14 @@ for m=1:M
         pars.dat{m}.preproc.denoise.admm.alpha = 2;
     end     
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
-        pars.dat{m}.preproc.denoise.admm.est_rho = true;
-    end       
+        pars.dat{m}.preproc.denoise.admm.est_rho = false;
+    end  
+    if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_tau')
+        if strcmp(pars.dat{m}.modality,'CT')
+            pars.dat{m}.preproc.denoise.admm.est_tau = true;
+        else
+            pars.dat{m}.preproc.denoise.admm.est_tau = false;
+        end
+    end          
 end
 %==========================================================================

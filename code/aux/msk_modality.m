@@ -1,5 +1,5 @@
 function msk = msk_modality(f,modality,trunc_ct)
-if nargin<3, trunc_ct = [0 100]; end
+if nargin<3, trunc_ct = []; end
 
 if strcmp(modality,'MRI'),    
     msk = isfinite(f) & (f~=0);
