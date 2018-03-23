@@ -10,15 +10,13 @@ obj.reg      = [0 0.001 0.5 0.05 0.2]*0.1;
 obj.fwhm     = 1;
 obj.samp     = 4;
 obj.biasfwhm = 60*ones(1,N);
+obj.mrf      = 2;    
+obj.cleanup  = 1;   
 
 if strcmp(modality,'CT')
-    obj.biasreg  = 10;
-    obj.cleanup  = 0;
-    obj.mrf      = 0;    
+    obj.biasreg  = 10; 
 elseif strcmp(modality,'MRI')
-    obj.biasreg  = 1e-3*(1/5)*ones(1,N);
-    obj.cleanup  = 1;
-    obj.mrf      = 2;
+    obj.biasreg  = 1e-3*(1/5)*ones(1,N);    
 end
 
 tpmname   = fullfile(spm('dir'),'tpm','TPM.nii');

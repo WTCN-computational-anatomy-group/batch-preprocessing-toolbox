@@ -267,12 +267,46 @@ if any(any(obj.preproc.write_tc==true) == true) || obj.preproc.do_skull_strip ||
         clear resp
                                                
         for z=1:V0(1).dim(3) % loop over slices
-            msk(:,:,z) = msk(:,:,z)>0.2;               % Threshold
-            msk(:,:,z) = imfill(msk(:,:,z),4,'holes'); % Fill holes
-
             msk(:,:,z) = imgaussfilt(msk(:,:,z),1);    % Smooth
-            msk(:,:,z) = msk(:,:,z)>0.8;               % Threshold
+            msk(:,:,z) = msk(:,:,z)>0.5;               % Threshold
+            msk(:,:,z) = imfill(msk(:,:,z),4,'holes'); % Fill holes
         end
+
+        % Mask out voxels based on SPM TPM size
+        pth_tpm = fullfile(spm('dir'),'tpm','TPM.nii,');
+        V1      = spm_vol(pth_tpm);
+
+        M0  = V0(1).mat;      
+        dm0 = V0(1).dim; 
+        M1  = V1(1).mat;  
+        dm1 = V1(1).dim;
+
+        T = M1\M0; % Get the mapping from M0 to M1
+
+        % Use ndgrid to give an array of voxel indices
+        [x0,y0,z0] = ndgrid(single(1:dm0(1)),...
+                            single(1:dm0(2)),...
+                            single(1:dm0(3)));
+
+        % Transform these indices to the indices that they point to in the reference image
+        D = cat(4,T(1,1)*x0 + T(1,2)*y0 + T(1,3)*z0 + T(1,4), ...
+                  T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4), ...
+                  T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4));
+        clear x0 y0 z0
+        
+        % Mask according to whether these are < 1 or > than the dimensions of the reference image.        
+        msk1 = cell(1,3);
+        ix   = [1 1 20];
+        for i=1:3
+            msk1{i} = D(:,:,:,i) >= ix(i) & D(:,:,:,i) <= dm1(i);
+        end
+        clear D
+        
+        % Generate masked image
+        for i=1:3
+            msk = msk1{i}.*msk;
+        end
+        clear msk1
         
         if 0
             % For testing skull-stripping
