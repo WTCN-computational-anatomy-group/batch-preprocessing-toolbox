@@ -2,9 +2,62 @@
 
 This code performs batch pre-processing of neuroimaging data using the SPM software.
 
+## Folder structure
+This code requires a well-defined folder structure of the input data. What follows is an example of this structure. 
+
+Let's say we have eight subjects who each have T1-, T2- and PD-weighted MR data; and an image with categorical labels of tissue types. If the root directory is called *data1* then the folder structure should be:
+
+|-- *data1*  
+|-- |-- *S1*  
+|-- |-- |-- *scans*  
+|-- |-- |-- | -- *T1*  
+|-- |-- |-- | -- *T2*  
+|-- |-- |-- | -- *PD*  
+|-- |-- |-- *labels*    
+.  
+.  
+.  
+|-- |-- *S8*  
+|-- |-- |-- *scans*  
+|-- |-- |-- | -- *T1*  
+|-- |-- |-- | -- *T2*  
+|-- |-- |-- | -- *PD*  
+|-- |-- |-- *labels*   
+
+The folder that contains the imaging data for each subjects must be named *scans* and the folder that contains the labels *labels*. The categorical labels are assumed to be stored in one image.
+
 ## Basic use cases
 
-### Example one
+Four basic use cases are in the main function *preprocess_images.m*. It uses data available in the shared folder *Ashburner_group*.
+
+### Example 1 (T1-weighted data)
+* Rigidly realign to MNI space
+* Remove data outside of head (+neck)
+* Bias-field correct
+* Skull strip
+* Make ML-labels
+* Normalise intensities
+* Write 2D versions
+
+### Example 2 (T1, T2-, PD-weighted data)
+* Rigidly realign to MNI space
+* Remove data outside of head
+* Co-register
+* Reslice to image with largest FOV
+* Make 1 mm isotropic voxels
+* Write 2D versions
+
+### Example 3 (T1-weighted data)
+* Rigidly realign to MNI space
+* Remove data outside of head (+neck)
+* Segment
+* Write 2D versions
+
+### Example 4 (CT data)
+* Rigidly realign to MNI space
+* Remove data outside of head (+neck)
+* Skull strip
+* Write 2D versions
 
 ## Dependencies
 
@@ -18,5 +71,6 @@ Furthermore, executable scripts depend on our [`distributed-computing` toolbox](
 
 * Add functionality to DICOM convert (with new DICOM convert code)
 * Include labels in pre-processing (when applicable)
-* Add functionality to normalise MRI intensities
+* Improve functionality for normalising MRI intensities
 * Compare IXI co-reg vs non-co-reg
+* Estimate MRI tau using Rice mixture and then FWHM. Will hopefully improve MRI SR..
