@@ -113,7 +113,7 @@ for m=1:M
         pars.dat{m}.preproc.superres.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.superres.admm,'rho')
-        pars.dat{m}.preproc.superres.admm.rho = 1;
+        pars.dat{m}.preproc.superres.admm.rho = 0.25;
     end        
     if ~isfield(pars.dat{m}.preproc.superres.admm,'niter')
         pars.dat{m}.preproc.superres.admm.niter = 50;
@@ -148,15 +148,12 @@ for m=1:M
     if ~isfield(pars.dat{m}.preproc.denoise,'verbose')
         pars.dat{m}.preproc.denoise.verbose = false;
     end    
-    if ~isfield(pars.dat{m}.preproc.denoise,'lambda_ct')
-        pars.dat{m}.preproc.denoise.lambda_ct = 1e-2;
-    end    
     
     if ~isfield(pars.dat{m}.preproc.denoise,'admm')
         pars.dat{m}.preproc.denoise.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 1;
+        pars.dat{m}.preproc.denoise.admm.rho = 0.25;
     end        
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
         pars.dat{m}.preproc.denoise.admm.niter = 100;
@@ -175,13 +172,6 @@ for m=1:M
     end     
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
         pars.dat{m}.preproc.denoise.admm.est_rho = false;
-    end  
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_tau')
-        if strcmp(pars.dat{m}.modality,'CT')
-            pars.dat{m}.preproc.denoise.admm.est_tau = true;
-        else
-            pars.dat{m}.preproc.denoise.admm.est_tau = false;
-        end
-    end          
+    end       
 end
 %==========================================================================

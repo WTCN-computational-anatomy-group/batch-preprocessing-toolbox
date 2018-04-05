@@ -6,6 +6,10 @@ for m=1:M
     scans = pars.dat{m}.scans;
     N     = numel(scans{1});
     
+    if scans{1}{1}{1}.dim(3)==1
+        pars.dat{m}.preproc.write_2d = false;
+    end
+    
     %----------------------------------------------------------------------    
     if isempty(pars.dat{m}.dir_preproc)
         dir_preproc          = fileparts(scans{1}{1}{1}.fname);

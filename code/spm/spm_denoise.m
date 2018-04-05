@@ -8,14 +8,17 @@ vx        = vxsize(V{1}{1}.mat);
 pars_den  = obj.preproc.denoise;
 pars_admm = pars_den.admm;
 
-% Initialise variables
-%--------------------------------------------------------------------------
-
 % Estimate model parameters (tau,lambda)
-[tau,lambda] = estimate_model_parameters(V,obj.modality,pars_den.lambda_ct);
-tau          = cell2mat(tau);
+%--------------------------------------------------------------------------
+tau    = zeros(1,N);
+lambda = zeros(1,N);
+for n=1:N
+    tau(n)    = estimate_tau(V{n}{1}.fname,obj.modality);
+    lambda(n) = estimate_lambda(V{n}{1}.fname,obj.modality);
+end
 
-% Image data
+% Get image data
+%--------------------------------------------------------------------------
 X   = cell(1,N);
 msk = cell(1,N);
 for n=1:N
@@ -111,7 +114,6 @@ verbose = pars.verbose;
 mu      = pars.mu;
 alpha   = pars.alpha;
 est_rho = pars.est_rho;
-est_tau = pars.est_tau;
 
 dm = size(X{1});
 if numel(dm)==2, dm(3) = 1; end
@@ -174,11 +176,6 @@ end
 %--------------------------------------------------------------------------
 ll = -Inf;
 for iter=1:niter
-       
-    if est_tau
-        % Re-estimates tau parameter based on residual (only if CT)
-        tau = estimate_ct_tau(X{n},Y{n},vx);
-    end
 
     %----------------------------------------------------------------------
     % Sub-problem U

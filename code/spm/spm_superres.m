@@ -10,10 +10,8 @@ pars_admm = pars_sr.admm;
 proj_mat  = pars_sr.proj_mat;
 trunc_ct  = pars_sr.trunc_ct;
 
-% Initialise
-%--------------------------------------------------------------------------
-
 % Get LR images
+%--------------------------------------------------------------------------
 X   = {};
 msk = {};
 for n=1:N
@@ -27,6 +25,7 @@ for n=1:N
 end
 
 % Compute super-resolved images' orientation matrix and dimensions
+%--------------------------------------------------------------------------
 if V{1}{1}.dim(3)>1
     pth = {};
     cnt = 1;
@@ -52,17 +51,29 @@ else
 end
 
 % Initialise projection matrices (A)
+%--------------------------------------------------------------------------
 dat = {};
 for n=1:N
     dat{n}.mat      = M1;
     dat{n}.dm       = dm1;
-    dat{n}.proj_mat = proj_mat;
-    
-    dat{n} = init_A(V{n},dat{n});         
+    dat{n}.proj_mat = proj_mat;    
+    dat{n}          = init_A(V{n},dat{n});         
 end
 
 % Estimate model parameters (tau,lambda)
-[tau,lambda] = estimate_model_parameters(V,obj.modality);
+%--------------------------------------------------------------------------
+tau    = cell(1,N);
+lambda = zeros(1,N);
+for n=1:N
+    I       = numel(V{n});
+    tau{n}  = zeros(1,I);
+    lambda1 = zeros(1,I);
+    for i=1:I
+        tau{n}(i)  = estimate_tau(V{n}{i}.fname,obj.modality);
+        lambda1(i) = estimate_lambda(V{n}{i}.fname,obj.modality);
+    end
+    lambda(n) = mean(lambda1);
+end
 
 % Run algorithm
 %--------------------------------------------------------------------------
@@ -70,7 +81,7 @@ Y = admm_superres(X,dat,tau,lambda,dm1,vx1,pars_admm);
 
 % Make integer
 for n=1:N
-    Y{n}             = round(Y{n});
+    Y{n} = round(Y{n});
     if strcmp(obj.modality,'MRI')
         Y{n}(Y{n}<0) = 0;
     end
@@ -98,28 +109,7 @@ end
 
 if pars_sr.verbose
     % Visualise result
-    if V{1}{1}.dim(3)>1
-        spm_check_registration(char(fnames))
-    else               
-        figure(666);
-        Nii = nifti(fnames{1});
-        img = Nii.dat(:,:,:);
-        subplot(121);
-        if strcmp(obj.modality,'CT')
-            imagesc(img',[0 100]); colormap(gray); axis off xy
-        else
-            imagesc(img'); colormap(gray); axis off xy
-        end         
-        
-        Nii = nifti(fnames{2});
-        img = Nii.dat(:,:,:);
-        subplot(122); 
-        if strcmp(obj.modality,'CT')
-            imagesc(img',[0 100]); colormap(gray); axis off xy
-        else
-            imagesc(img'); colormap(gray); axis off xy
-        end   
-    end
+    spm_check_registration(char(fnames))
 end
 
 % Delete input data

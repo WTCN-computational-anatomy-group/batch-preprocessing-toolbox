@@ -79,6 +79,12 @@ if obj.preproc.do_realign2mni
             obj.scans{n}{i} = spm_vol(V.fname);  
         end
     end    
+    
+    if ~isempty(obj.labels)
+        V = obj.labels;
+        spm_get_space(V.fname,M\V.mat); 
+        obj.labels = spm_vol(V.fname); 
+    end
 end               
 
 % Remove image data outside of the head (air..)
@@ -89,15 +95,26 @@ if obj.preproc.do_crop
         for i=1:I
             V = obj.scans{n}{i};
             
-            spm_impreproc('atlas_crop',V.fname,'cr_',obj.preproc.do_rem_neck); 
+            [~,bb] = spm_impreproc('atlas_crop',V.fname,'cr_',obj.preproc.do_rem_neck); 
 
-            [pth,nam,ext] = fileparts(V.fname);
+            [pth,nam,ext]   = fileparts(V.fname);
             delete(V.fname);
-            nfname        = fullfile(pth,['cr_' nam ext]);
-            V             = spm_vol(nfname);                                  
-            
+            nfname          = fullfile(pth,['cr_' nam ext]);
+            V               = spm_vol(nfname);                                             
             obj.scans{n}{i} = V;
         end
+    end    
+    
+    if ~isempty(obj.labels)
+        V = obj.labels;
+       
+        spm_impreproc('subvol',V,bb,'cr_'); 
+       
+        [pth,nam,ext] = fileparts(V.fname);
+        delete(V.fname);
+        nfname        = fullfile(pth,['cr_' nam ext]);
+        V             = spm_vol(nfname);                                  
+        obj.labels    = V;
     end    
 end  
 
@@ -164,6 +181,17 @@ if ~isempty(obj.preproc.vx)
         nfname          = fullfile(pth,['vx_' nam ext]);
         obj.scans{n}{1} = spm_vol(nfname);
     end  
+    
+    if ~isempty(obj.labels)
+        V = obj.labels;
+       
+        spm_impreproc('nm_reorient',V.fname,obj.preproc.vx,0,'vx_');    
+    
+        [pth,nam,ext]   = fileparts(V.fname);
+        delete(V.fname);
+        nfname          = fullfile(pth,['vx_' nam ext]);
+        obj.labels      = spm_vol(nfname);
+    end    
 end
 
 % Simple normalisation of image intensities
