@@ -56,9 +56,24 @@ if obj.preproc.do_realign2mni
         nfname          = fullfile(pth,['ro_' nam ext]);
         obj.scans{1}{1} = spm_vol(nfname);
         
-        V = obj.scans{1}{1}; 
+        V               = obj.scans{1}{1}; 
         spm_impreproc('reset_origin',V.fname);
         obj.scans{1}{1} = spm_vol(nfname);
+        
+        if ~isempty(obj.labels)
+            V = obj.labels;
+                        
+            spm_impreproc('nm_reorient',V.fname,vxsize(V.mat),1,'ro_');    
+    
+            [pth,nam,ext] = fileparts(V.fname);
+            delete(V.fname);
+            nfname        = fullfile(pth,['ro_' nam ext]);
+            obj.labels    = spm_vol(nfname);
+
+            V = obj.labels; 
+            spm_impreproc('reset_origin',V.fname);
+            obj.labels = spm_vol(nfname);            
+        end
     end
     
     % Just align the first image  
