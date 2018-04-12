@@ -1,6 +1,11 @@
 function pars = pars_default(pars,test_level)
 if nargin<2, test_level = 0; end
 
+if isstring(pars) || ischar(pars)
+    % Parameters are in a JSON-file
+    pars = parse_json(pars);
+end
+
 % Data-set specific parameters (m=1,...,M)
 %--------------------------------------------------------------------------
 if ~isfield(pars,'dat'), 
@@ -173,5 +178,30 @@ for m=1:M
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
         pars.dat{m}.preproc.denoise.admm.est_rho = false;
     end       
+end
+%==========================================================================
+
+%==========================================================================
+function pars = parse_json(pth)
+pars = spm_jsonread(pth);
+M    = numel(pars.dat);
+
+if isstruct(pars.dat)
+    % Convert dat from struct-array to cell-array    
+    opars    = pars;
+    pars     = rmfield(pars,'dat');    
+    pars.dat = cell(1,M);
+    for m=1:M
+        pars.dat{m} = opars.dat(m);
+    end
+end
+
+% Some cleaning up
+for m=1:M
+    if isfield(pars.dat{m},'S')
+        if isempty(pars.dat{m}.S)
+            pars.dat{m}.S = Inf;
+        end
+    end
 end
 %==========================================================================

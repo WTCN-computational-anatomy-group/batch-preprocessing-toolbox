@@ -3,24 +3,25 @@ function preprocess_images
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
 %--------------------------------------------------------------------------
-pth2_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
-pth2_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
-holly_server_login       = 'mbrud';
-holly_client_folder      = '/data/mbrud/tmp-preproc/';
-holly_matlab_add_src     = '/home/mbrud/dev/batch-preprocessing-toolbox';
-holly_matlab_add_aux     = '/home/mbrud/dev/auxiliary-functions';
+pth_distributed_toolbox = '/home/mbrud/dev/distributed-computing';
+pth_auxiliary_functions = '/home/mbrud/dev/auxiliary-functions';
+
+holly_server_login   = 'mbrud';
+holly_client_folder  = '/data/mbrud/tmp-preproc/';
+holly_matlab_add_src = '/home/mbrud/dev/batch-preprocessing-toolbox';
+holly_matlab_add_aux = '/home/mbrud/dev/auxiliary-functions';
 
 % addpath
 %--------------------------------------------------------------------------
 addpath(genpath('./code'))
-addpath(pth2_distributed_toolbox)
-addpath(pth2_auxiliary_functions)
+addpath(pth_distributed_toolbox)
+addpath(pth_auxiliary_functions)
 
 %--------------------------------------------------------------------------
 % Set distribute package parameters
 %--------------------------------------------------------------------------
 
-test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+test_level = 1; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
 
 holly               = struct;
 holly.server.ip     = 'holly';
@@ -46,19 +47,7 @@ holly = distribute_default(holly);
 %--------------------------------------------------------------------------
 % Set algorithm parameters
 %--------------------------------------------------------------------------
-m = 0;
-
-% CT data
-%-------------
-m = m + 1;
-
-pars.dat{m}.dir_data = '/data/mbrud/images/CT/CHROMIS';
-pars.dat{m}.modality = 'CT';
-
-pars.dat{m}.preproc.do_realign2mni = true;
-pars.dat{m}.preproc.do_crop = true;
-pars.dat{m}.preproc.do_rem_neck = true;
-pars.dat{m}.preproc.write_2d = true;
+pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT.json';
 
 pars = pars_default(pars,test_level);
 
