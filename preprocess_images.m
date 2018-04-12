@@ -76,7 +76,7 @@ obj   = unfold_cell(obj,2);
 
 print_progress('Finished');
 
-% browse_subjects(['2d_' pars.dat{m}.dir_data '_preproc-ra-cr-rn'],pars.dat{m}.modality)
+m = 1; browse_subjects(obj{m}.dir_preproc_2d,obj{m}.modality);
 %==========================================================================
 
 %==========================================================================
