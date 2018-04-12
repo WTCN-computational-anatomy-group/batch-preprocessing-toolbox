@@ -1,4 +1,4 @@
-function tau = estimate_tau(fname,modality,verbose)
+function [tau,fwhm,sd] = estimate_tau(fname,modality,verbose)
 if nargin<3, verbose = false; end
 
 n   = nifti(fname);
@@ -15,6 +15,7 @@ end
 
 if strcmp(modality,'CT')
     msk = X>-1020 & X<-980;
+    msk = imfill(msk,'hole'); 
     X   = X - mean(X(msk));
 elseif strcmp(modality,'MRI')
     [~,val_head] = my_spm_noise_estimate(fname);
@@ -36,7 +37,7 @@ SmoSuf = ComputeSmoSuf(X,vx);
 
 fwhm = compute_fwhm(SmoSuf);
 
-tau = compute_tau(fwhm,vx);
+[tau,sd] = compute_tau(fwhm,vx);
 
 if verbose
     fprintf('fwhm = %4.4f, tau = %4.4f\n',fwhm,tau);
@@ -78,10 +79,10 @@ fwhm = sqrt(max(fwhm^2 - 0.5, 4*log(2)/pi));
 %==========================================================================
 
 %==========================================================================
-function tau = compute_tau(fwhm,vx)
+function [tau,sd] = compute_tau(fwhm,vx)
 if nargin<2, vx = [1 1 1]; end
 
 fwhm = fwhm + mean(vx); 
-s    = fwhm/sqrt(8*log(2));  % Standard deviation
-tau  = prod(4*pi*(s./vx).^2 + 1)^(-1/2); 
+sd   = fwhm/sqrt(8*log(2));  % Standard deviation
+tau  = prod(4*pi*(sd./vx).^2 + 1)^(-1/2); 
 %==========================================================================
