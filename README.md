@@ -69,8 +69,5 @@ Furthermore, executable scripts depend on our [`distributed-computing` toolbox](
 
 ## TODO
 
-* Add functionality to DICOM convert (with new DICOM convert code)
-* Include labels in pre-processing (when applicable)
 * Improve functionality for normalising MRI intensities
 * Compare IXI co-reg vs non-co-reg
-* Estimate MRI tau using Rice mixture and then FWHM. Will hopefully improve MRI SR..

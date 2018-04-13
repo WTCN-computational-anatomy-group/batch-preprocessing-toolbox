@@ -3,8 +3,8 @@ function preprocess_images
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
 %--------------------------------------------------------------------------
-pth_distributed_toolbox = '/home/mbrud/dev/distributed-computing';
-pth_auxiliary_functions = '/home/mbrud/dev/auxiliary-functions';
+pth_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
+pth_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
 
 holly_server_login   = 'mbrud';
 holly_client_folder  = '/data/mbrud/tmp-preproc/';
@@ -21,7 +21,7 @@ addpath(pth_auxiliary_functions)
 % Set distribute package parameters
 %--------------------------------------------------------------------------
 
-test_level = 1; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
 
 holly               = struct;
 holly.server.ip     = 'holly';
@@ -72,6 +72,6 @@ m = 1; browse_subjects(obj{m}.dir_preproc_2d,obj{m}.modality);
 function print_progress(status)
 date = datestr(now,'mmmm dd, yyyy HH:MM:SS');
 fprintf('=======================================================\n')  
-fprintf('| %s | %s processing images.\n',date,status)
+fprintf('| %s | %s processing images\n',date,status)
 fprintf('=======================================================\n\n')   
 %==========================================================================

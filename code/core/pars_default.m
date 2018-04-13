@@ -17,15 +17,15 @@ for m=1:M
     if ~isfield(pars.dat{m},'dir_data'), 
         error('pars.dat.dir_data needs to be defined!'); 
     end
-
+    
     % General parameters
     %----------------------------------------------------------------------    
     if ~isfield(pars.dat{m},'S')
-        pars.dat{m}.S = Inf;
-        if test_level==2 || test_level==3, pars.dat{m}.S = 16;
-        elseif test_level==1               pars.dat{m}.S = 1;   
-        end 
+        pars.dat{m}.S = Inf;        
     end    
+    if     test_level==2 || test_level==3, pars.dat{m}.S = 8;
+    elseif test_level==1                   pars.dat{m}.S = 1;   
+    end     
     if ~isfield(pars.dat{m},'modality')
         pars.dat{m}.modality = 'MRI';
     end    
