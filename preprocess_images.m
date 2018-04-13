@@ -1,5 +1,7 @@
 function preprocess_images
 
+test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
 %--------------------------------------------------------------------------
@@ -21,8 +23,6 @@ addpath(pth_auxiliary_functions)
 % Set distribute package parameters
 %--------------------------------------------------------------------------
 
-test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
-
 holly               = struct;
 holly.server.ip     = 'holly';
 holly.server.login  = holly_server_login;
@@ -35,7 +35,7 @@ holly.restrict      = 'char';
 holly.clean         = false;
 holly.clean_init    = true;
 holly.verbose       = false;
-holly.job.mem       = '6G';
+holly.job.mem       = '4G';
 holly.job.use_dummy = true;
 
 if     test_level==1, holly.server.ip  = ''; holly.client.workers = 0;
@@ -47,7 +47,7 @@ holly = distribute_default(holly);
 %--------------------------------------------------------------------------
 % Set algorithm parameters
 %--------------------------------------------------------------------------
-pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT.json';
+pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT-vx.json';
 
 pars = pars_default(pars,test_level);
 
