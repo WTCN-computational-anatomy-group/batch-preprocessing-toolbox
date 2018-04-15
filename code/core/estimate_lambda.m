@@ -2,7 +2,7 @@ function lambda = estimate_lambda(fname,modality,verbose)
 if nargin<3, verbose = false; end
 
 if strcmp(modality,'CT')
-    lambda = 0.5*1e-2; % Seems empirically like a good value
+    lambda = 1.6*1e-3; % Seems empirically like a good value
 elseif strcmp(modality,'MRI')
     n = nifti(fname);
     X = single(n.dat(:,:,:));

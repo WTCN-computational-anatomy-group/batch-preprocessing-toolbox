@@ -1,4 +1,4 @@
-function pars = pars_default(pars,test_level)
+function pars = preproc_default(pars,test_level)
 if nargin<2, test_level = 0; end
 
 if isstring(pars) || ischar(pars)
@@ -158,7 +158,7 @@ for m=1:M
         pars.dat{m}.preproc.denoise.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 0.25;
+        pars.dat{m}.preproc.denoise.admm.rho = 1e3;
     end        
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
         pars.dat{m}.preproc.denoise.admm.niter = 100;
@@ -176,7 +176,7 @@ for m=1:M
         pars.dat{m}.preproc.denoise.admm.alpha = 2;
     end     
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
-        pars.dat{m}.preproc.denoise.admm.est_rho = false;
+        pars.dat{m}.preproc.denoise.admm.est_rho = true;
     end       
 end
 %==========================================================================

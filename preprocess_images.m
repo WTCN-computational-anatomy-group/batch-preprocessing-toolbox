@@ -5,8 +5,10 @@ test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 s
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
 %--------------------------------------------------------------------------
-pth_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
-pth_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
+pth_distributed_toolbox = '/home/mbrud/dev/distributed-computing';
+pth_auxiliary_functions = '/home/mbrud/dev/auxiliary-functions';
+% pth_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
+% pth_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
 
 holly_server_login   = 'mbrud';
 holly_client_folder  = '/data/mbrud/tmp-preproc/';
@@ -42,14 +44,17 @@ if     test_level==1, holly.server.ip  = ''; holly.client.workers = 0;
 elseif test_level==2  holly.server.ip  = ''; holly.client.workers = Inf;
 end
 
+holly.server.ip  = ''; holly.client.workers = 0;
+% holly.server.ip  = ''; holly.client.workers = Inf;
+    
 holly = distribute_default(holly);
 
 %--------------------------------------------------------------------------
 % Set algorithm parameters
 %--------------------------------------------------------------------------
-pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT-vx.json';
+pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/denoise-CT-2d.json';
 
-pars = pars_default(pars,test_level);
+pars = preproc_default(pars,test_level);
 
 %--------------------------------------------------------------------------
 % Start processing images
@@ -65,7 +70,9 @@ obj   = unfold_cell(obj,2);
 
 print_progress('Finished');
 
-m = 1; browse_subjects(obj{m}.dir_preproc_2d,obj{m}.modality);
+% Show the preprocessing results
+m = 1; 
+browse_subjects(obj{m}.dir_preproc,obj{m}.modality);
 %==========================================================================
 
 %==========================================================================
