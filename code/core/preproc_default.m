@@ -23,7 +23,7 @@ for m=1:M
     if ~isfield(pars.dat{m},'S')
         pars.dat{m}.S = Inf;        
     end    
-    if     test_level==2 || test_level==3, pars.dat{m}.S = 8;
+    if     test_level==2 || test_level==3, pars.dat{m}.S = min(8,pars.dat{m}.S);
     elseif test_level==1                   pars.dat{m}.S = 1;   
     end     
     if ~isfield(pars.dat{m},'modality')
@@ -153,15 +153,18 @@ for m=1:M
     if ~isfield(pars.dat{m}.preproc.denoise,'verbose')
         pars.dat{m}.preproc.denoise.verbose = false;
     end    
+    if ~isfield(pars.dat{m}.preproc.denoise,'lambda_ct')
+        pars.dat{m}.preproc.denoise.lambda_ct = 1e-2;
+    end    
     
     if ~isfield(pars.dat{m}.preproc.denoise,'admm')
         pars.dat{m}.preproc.denoise.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 1e3;
+        pars.dat{m}.preproc.denoise.admm.rho = 1;
     end        
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
-        pars.dat{m}.preproc.denoise.admm.niter = 100;
+        pars.dat{m}.preproc.denoise.admm.niter = 50;
     end       
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'tol')
         pars.dat{m}.preproc.denoise.admm.tol = 1e-4;
@@ -176,7 +179,7 @@ for m=1:M
         pars.dat{m}.preproc.denoise.admm.alpha = 2;
     end     
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
-        pars.dat{m}.preproc.denoise.admm.est_rho = true;
+        pars.dat{m}.preproc.denoise.admm.est_rho = false;
     end       
 end
 %==========================================================================

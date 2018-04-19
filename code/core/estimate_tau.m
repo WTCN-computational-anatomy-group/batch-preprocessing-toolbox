@@ -14,8 +14,8 @@ if verbose
 end
 
 if strcmp(modality,'CT')
-    msk = X>-1020 & X<-980;
-    msk = imfill(msk,'hole'); 
+    msk = X>-1001 & X<-995;
+%     msk = imfill(msk,'hole'); 
     X   = X - mean(X(msk));
 elseif strcmp(modality,'MRI')
     [~,val_head] = my_spm_noise_estimate(fname);
@@ -33,7 +33,8 @@ if verbose
     drawnow;
 end
 
-SmoSuf = ComputeSmoSuf(X,vx);
+% SmoSuf = ComputeSmoSuf(X,vx);
+SmoSuf = ComputeSmoSuf_slice(X,vx);
 
 fwhm = compute_fwhm(SmoSuf);
 
@@ -46,15 +47,20 @@ end
 
 %==========================================================================
 function SmoSuf = ComputeSmoSuf(img,vx)
-if nargin<2, vx = [1 1 1]; end
-
 SmoSuf    = zeros(1,8);
 tmp       = img;
 msk       = isfinite(tmp(:));
 SmoSuf(1) = sum(msk(:));
 SmoSuf(2) = sum(tmp(msk(:)).^2);
 
-[Dx,Dy,Dz] = spm_imbasics('grad',img,vx);
+d         = size(img);
+[id{1:3}] = ndgrid(single(1:d(1)),single(1:d(2)),single(1:d(3)));
+id        = cat(4,id{:});
+
+% fc           = spm_diffeo('bsplinc',img,[1 1 1 1 1 1]);
+% [~,Dx,Dy,Dz] = spm_diffeo('bsplins',fc,id,[1 1 1 1 1 1]);
+
+[Dx,Dy,Dz] = spm_imbasics('grad',tmp,vx);
 
 tmp       = Dx;
 msk       = isfinite(tmp(:));
@@ -70,6 +76,36 @@ tmp       = Dz;
 msk       = isfinite(tmp(:));
 SmoSuf(7) = sum(msk(:));
 SmoSuf(8) = sum(tmp(msk(:)).^2);
+%==========================================================================
+
+%==========================================================================
+function SmoSuf = ComputeSmoSuf_slice(img,vx)
+d         = size(img);
+[id{1:3}] = ndgrid(single(1:d(1)),single(1:d(2)),single(1));
+id        = cat(4,id{:});
+SmoSuf    = zeros(1,8);
+for z=1:d(3)
+    tmp = img(:,:,z);
+    
+    msk       = isfinite(tmp(:));
+    SmoSuf(1) = SmoSuf(1) + sum(msk(:));
+    SmoSuf(2) = SmoSuf(2) + sum(tmp(msk(:)).^2);
+    
+%     fc        = spm_diffeo('bsplinc',tmp,[1 1 0 1 1 1]);
+%     [~,Dx,Dy] = spm_diffeo('bsplins',fc,id,[1 1 0 1 1 1]);
+
+    [Dx,Dy] = spm_imbasics('grad',tmp,vx);
+    
+    tmp       = Dx;
+    msk       = isfinite(tmp(:));
+    SmoSuf(3) = SmoSuf(3) + sum(msk(:));
+    SmoSuf(4) = SmoSuf(4) + sum(tmp(msk(:)).^2);
+
+    tmp       = Dy;
+    msk       = isfinite(tmp(:));
+    SmoSuf(5) = SmoSuf(5) + sum(msk(:));
+    SmoSuf(6) = SmoSuf(6) + sum(tmp(msk(:)).^2);
+end
 %==========================================================================
 
 %==========================================================================

@@ -14,7 +14,7 @@ tau    = zeros(1,N);
 lambda = zeros(1,N);
 for n=1:N
     tau(n)    = estimate_tau(V{n}{1}.fname,obj.modality);
-    lambda(n) = estimate_lambda(V{n}{1}.fname,obj.modality);
+    lambda(n) = estimate_lambda(V{n}{1}.fname,obj.modality,pars_den.lambda_ct);
 end
 
 % Get image data
@@ -88,6 +88,7 @@ if pars_den.verbose
             imagesc(img'); colormap(gray); axis off xy
         end   
     end
+    drawnow
 end
 
 % Delete input data
