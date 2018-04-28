@@ -1,14 +1,18 @@
 function preprocess_images
 
-test_level = 3; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+test_level = 2; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+pars       = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT-den.json';
 
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
 %--------------------------------------------------------------------------
-% pth_distributed_toolbox = '/home/mbrud/dev/distributed-computing';
-% pth_auxiliary_functions = '/home/mbrud/dev/auxiliary-functions';
-pth_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
-pth_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
+if test_level==1 || test_level==2
+    pth_distributed_toolbox = '/home/mbrud/dev/WTCN-computational-anatomy-group/distributed-computing';
+    pth_auxiliary_functions = '/home/mbrud/dev/WTCN-computational-anatomy-group/auxiliary-functions';
+else
+    pth_distributed_toolbox = '/cherhome/mbrud/dev/distributed-computing';
+    pth_auxiliary_functions = '/cherhome/mbrud/dev/auxiliary-functions';
+end
 
 holly_server_login   = 'mbrud';
 holly_client_folder  = '/data/mbrud/TEMP/batch-preprocessing-toolbox/';
@@ -36,9 +40,11 @@ holly.matlab.add    = holly_matlab_add_aux;
 holly.restrict      = 'char';
 holly.clean         = false;
 holly.clean_init    = true;
-holly.verbose       = false;
+holly.verbose       = true;
+holly.job.batch     = true;
 holly.job.mem       = '8G';
-holly.job.use_dummy = true;
+holly.job.est_mem   = true;
+holly.job.use_dummy = false;
 
 if     test_level==1, holly.server.ip  = ''; holly.client.workers = 0;
 elseif test_level==2  holly.server.ip  = ''; holly.client.workers = Inf;
@@ -51,7 +57,6 @@ holly = distribute_default(holly);
 %--------------------------------------------------------------------------
 % Set algorithm parameters
 %--------------------------------------------------------------------------
-pars = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/denoise-CT-3d.json';
 
 pars = preproc_default(pars,test_level);
 
@@ -61,18 +66,18 @@ pars = preproc_default(pars,test_level);
 
 print_progress('Started');
 
-pars = read_images(pars); 
-obj  = init_obj(pars);
+pars = read_images_preproc(pars); 
+obj  = init_obj_preproc(pars);
 
 [obj,ix] = unfold_cell(obj,2);
-[~,~]    = distribute(holly,'process_subject','inplace',obj);
+[~,~]    = distribute(holly,'process_subject_preproc','inplace',obj);
 obj      = fold_cell(obj,ix);
 
 print_progress('Finished');
 
 % Show the preprocessing results
 m = 1; 
-browse_subjects(obj{m}{1}.dir_preproc_2d,obj{m}{1}.modality);
+spm_misc('browse_subjects',obj{m}{1}.dir_preproc_2d,obj{m}{1}.modality);
 %==========================================================================
 
 %==========================================================================
