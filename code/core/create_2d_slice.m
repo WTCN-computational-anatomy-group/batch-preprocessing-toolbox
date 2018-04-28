@@ -1,8 +1,9 @@
 %==========================================================================
 function create_2d_slice(fname,axis_2d)
-V = spm_vol(fname);
+V  = spm_vol(fname);
+vx = spm_misc('vxsize',V.mat);
 
-spm_impreproc('nm_reorient',fname,vxsize(V.mat),1,'ro_');          
+spm_impreproc('nm_reorient',fname,vx,1,'ro_');          
 [pth,nam,ext] = fileparts(fname);
 nfname        = fullfile(pth,['ro_' nam ext]);
 delete(fname);

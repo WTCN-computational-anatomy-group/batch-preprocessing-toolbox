@@ -4,7 +4,7 @@ function obj = spm_denoise(obj)
 %--------------------------------------------------------------------------
 V         = obj.scans;
 N         = numel(V);
-vx        = vxsize(V{1}{1}.mat);
+vx        = spm_misc('vxsize',V{1}{1}.mat);
 pars_den  = obj.preproc.denoise;
 pars_admm = pars_den.admm;
 
@@ -23,7 +23,7 @@ X   = cell(1,N);
 msk = cell(1,N);
 for n=1:N
    X{n}          = single(V{n}{1}.private.dat(:,:,:)); % Observed data
-   msk{n}        = msk_modality(X{n},obj.modality); % Mask
+   msk{n}        = spm_misc('msk_modality',X{n},obj.modality); % Mask
    X{n}(~msk{n}) = NaN;
 end
 
@@ -51,7 +51,7 @@ cnt    = 1;
 for n=1:N
     [pth,nam,ext] = fileparts(V{n}{1}.fname);
     nfname        = fullfile(pth,['den_' nam ext]);
-    create_nii(nfname,Yhat{n},V{n}{1}.mat,V{n}{1}.dt,'denoised');
+    spm_misc('create_nii',nfname,Yhat{n},V{n}{1}.mat,V{n}{1}.dt,'denoised');        
     
     V1(n) = spm_vol(nfname);
     

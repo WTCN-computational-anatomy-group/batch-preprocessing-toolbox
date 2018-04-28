@@ -19,7 +19,7 @@ for n=1:N
     for i=1:I
         Nii                   = nifti(V{n}{i}.fname);        
         X{n}{i}               = single(Nii.dat(:,:,:)); % Observed data
-        msk{n}{i}             = msk_modality(X{n}{i},obj.modality,trunc_ct); % Mask
+        msk{n}{i}             = spm_misc('msk_modality',X{n}{i},obj.modality); % Mask
         X{n}{i} (~msk{n}{i} ) = NaN;        
     end
 end
@@ -40,7 +40,7 @@ if V{1}{1}.dim(3)>1
 else
     % Image is 2D (for testing)
     M0  = V{1}{1}.mat;
-    vx0 = vxsize(M0);
+    vx0 = spm_misc('vxsize',M0);    
     dm0 = V{1}{1}.dim;
     d   = vx0./vx1;
     D   = diag([d 1]);
@@ -94,7 +94,7 @@ cnt    = 1;
 for n=1:N
     [pth,nam,ext] = fileparts(V{n}{1}.fname);
     nfname        = fullfile(pth,['sr_' nam ext]);
-    create_nii(nfname,Y{n},M1,V{n}{1}.dt,'super-resolved');
+    spm_misc('create_nii',nfname,Y{n},M1,V{n}{1}.dt,'super-resolved');          
     
     V1(n) = spm_vol(nfname);
     

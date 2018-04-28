@@ -1,4 +1,4 @@
-function obj = process_subject(obj) 
+function obj = process_subject_preproc(obj) 
 
 % Make copies into obj.dir_preproc (in order to not modify the original
 % data)
@@ -47,9 +47,10 @@ if obj.preproc.do_realign2mni
     
     if strcmp(obj.modality,'CT')
         % Reset the origin (only if CT)
-        V = obj.scans{1}{1}; 
+        V  = obj.scans{1}{1}; 
+        vx = spm_misc('vxsize',V.mat);
         
-        spm_impreproc('nm_reorient',V.fname,vxsize(V.mat),1,'ro_');    
+        spm_impreproc('nm_reorient',V.fname,vx,1,'ro_');    
     
         [pth,nam,ext]   = fileparts(V.fname);
         delete(V.fname);
@@ -61,9 +62,10 @@ if obj.preproc.do_realign2mni
         obj.scans{1}{1} = spm_vol(nfname);
         
         if ~isempty(obj.labels)
-            V = obj.labels;
-                        
-            spm_impreproc('nm_reorient',V.fname,vxsize(V.mat),1,'ro_');    
+            V  = obj.labels;
+            vx = spm_misc('vxsize',V.mat);
+            
+            spm_impreproc('nm_reorient',V.fname,vx,1,'ro_');    
     
             [pth,nam,ext] = fileparts(V.fname);
             delete(V.fname);
@@ -216,7 +218,7 @@ if obj.preproc.normalise_intensities
         V         = obj.scans{n}{1};   
         Nii       = nifti(V.fname);
         img       = single(Nii.dat(:,:,:));
-        msk       = msk_modality(img,obj.modality);        
+        msk       = spm_misc('msk_modality',img,obj.modality);        
         
         sint = sum(reshape(img(msk),[],1));
         nm   = nnz(msk);        

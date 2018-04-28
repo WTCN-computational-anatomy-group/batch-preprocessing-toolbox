@@ -6,7 +6,8 @@ X   = single(n.dat(:,:,:));
 dm  = size(X);
 dm  = [dm 1];
 zix = floor(dm(3)/2) + 1;
-vx  = vxsize(n.mat);
+vx  = spm_misc('vxsize',n.mat);
+
 
 if verbose
     figure(665)
