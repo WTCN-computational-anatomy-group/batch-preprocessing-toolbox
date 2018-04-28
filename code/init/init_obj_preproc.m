@@ -1,4 +1,4 @@
-function obj = init_obj(pars)
+function obj = init_obj_preproc(pars)
 M   = numel(pars.dat);
 obj = cell(1,M);
 cnt = 1;

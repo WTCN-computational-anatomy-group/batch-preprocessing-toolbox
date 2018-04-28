@@ -1,4 +1,4 @@
-function pars = read_images(pars)
+function pars = read_images_preproc(pars)
 M = numel(pars.dat);
 for m=1:M % Loop over populations
     pth        = pars.dat{m}.dir_data;
