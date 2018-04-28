@@ -110,9 +110,6 @@ for m=1:M
     if ~isfield(pars.dat{m}.preproc.superres,'proj_mat')
         pars.dat{m}.preproc.superres.proj_mat = 'sinc';
     end    
-    if ~isfield(pars.dat{m}.preproc.superres,'trunc_ct')
-        pars.dat{m}.preproc.superres.trunc_ct = [];
-    end  
     
     if ~isfield(pars.dat{m}.preproc.superres,'admm')
         pars.dat{m}.preproc.superres.admm = struct;
