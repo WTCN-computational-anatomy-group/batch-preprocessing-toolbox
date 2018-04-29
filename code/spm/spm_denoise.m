@@ -106,7 +106,7 @@ end
 %==========================================================================
 function Y = admm_denoising(X,tau,lambda,vx,pars)
 
-% Set parametersWrite results
+% Set parameters
 %--------------------------------------------------------------------------
 niter   = pars.niter;
 tol     = pars.tol;
@@ -116,8 +116,9 @@ mu      = pars.mu;
 alpha   = pars.alpha;
 est_rho = pars.est_rho;
 
-dm = size(X{1});
+dm  = size(X{1});
 if numel(dm)==2, dm(3) = 1; end
+zix = floor(dm(3)/2) + 1;
 
 N   = numel(lambda); % Number of modalities
 ndm = 3; if dm(3)==1, ndm = 2; end % Number of dimensions
@@ -243,6 +244,20 @@ for iter=1:niter
     
     if verbose
         fprintf('%2d | %8.7f %8.7f %8.7f %8.7f\n',iter,ll1,d1,rho,tau);
+        
+        if iter==1
+            fig = figure(666);
+        else
+            set(0,'CurrentFigure',fig);  
+        end
+        subplot(121)
+        imagesc(X{1}(:,:,zix)',[0 100]); axis off image; colormap(gray);
+        
+        subplot(122)
+        imagesc(Y{1}(:,:,zix)',[0 100]); axis off image; colormap(gray);
+        
+        title(['iter=' num2str(iter)])
+        drawnow
     end    
     
     if iter>=20 && d1<tol

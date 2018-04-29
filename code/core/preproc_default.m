@@ -151,17 +151,17 @@ for m=1:M
         pars.dat{m}.preproc.denoise.verbose = false;
     end    
     if ~isfield(pars.dat{m}.preproc.denoise,'lambda_ct')
-        pars.dat{m}.preproc.denoise.lambda_ct = 1e-2;
+        pars.dat{m}.preproc.denoise.lambda_ct = 0.5*1e-1;
     end    
     
     if ~isfield(pars.dat{m}.preproc.denoise,'admm')
         pars.dat{m}.preproc.denoise.admm = struct;
     end
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 1;
+        pars.dat{m}.preproc.denoise.admm.rho = 1e0;
     end        
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
-        pars.dat{m}.preproc.denoise.admm.niter = 50;
+        pars.dat{m}.preproc.denoise.admm.niter = 30;
     end       
     if ~isfield(pars.dat{m}.preproc.denoise.admm,'tol')
         pars.dat{m}.preproc.denoise.admm.tol = 1e-4;

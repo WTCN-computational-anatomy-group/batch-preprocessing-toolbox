@@ -1,49 +1,16 @@
-function [tau,fwhm,sd] = estimate_tau(fname,modality,verbose)
-if nargin<3, verbose = false; end
-
-n   = nifti(fname);
-X   = single(n.dat(:,:,:));
-dm  = size(X);
-dm  = [dm 1];
-zix = floor(dm(3)/2) + 1;
-vx  = spm_misc('vxsize',n.mat);
-
-
-if verbose
-    figure(665)
-    subplot(121); imagesc(X(:,:,zix)'); axis xy off; colormap(gray)
-end
+function tau = estimate_tau(fname,modality)
+Nii = nifti(fname);
+X   =  single(Nii.dat(:,:,:));
+vx  = spm_misc('vxsize',Nii.mat);
 
 if strcmp(modality,'CT')
-    msk = X>-1001 & X<-995;
-%     msk = imfill(msk,'hole'); 
-    X   = X - mean(X(msk));
+    msk = X>-1010 & X<-990;
+    sd  = std(X(msk));
 elseif strcmp(modality,'MRI')
-    [~,val_head] = my_spm_noise_estimate(fname);
-    
-    msk = X<val_head;
-%     msk = imfill(msk,'hole'); 
-    
-    msk = msk | X==0;       
+    sd  = my_spm_noise_estimate(fname);     
 end
 
-X(~msk) = NaN;    
-
-if verbose
-    subplot(122); imagesc(msk(:,:,zix)'); axis xy off; colormap(gray)
-    drawnow;
-end
-
-% SmoSuf = ComputeSmoSuf(X,vx);
-SmoSuf = ComputeSmoSuf_slice(X,vx);
-
-fwhm = compute_fwhm(SmoSuf);
-
-[tau,sd] = compute_tau(fwhm,vx);
-
-if verbose
-    fprintf('fwhm = %4.4f, tau = %4.4f\n',fwhm,tau);
-end
+tau = 1/(2*sd^2);
 %==========================================================================
 
 %==========================================================================
@@ -82,6 +49,7 @@ SmoSuf(8) = sum(tmp(msk(:)).^2);
 %==========================================================================
 function SmoSuf = ComputeSmoSuf_slice(img,vx)
 d         = size(img);
+d         = [d 1];
 [id{1:3}] = ndgrid(single(1:d(1)),single(1:d(2)),single(1));
 id        = cat(4,id{:});
 SmoSuf    = zeros(1,8);
