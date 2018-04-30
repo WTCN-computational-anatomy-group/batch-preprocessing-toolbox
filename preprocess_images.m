@@ -1,7 +1,7 @@
 function preprocess_images
 
-test_level = 2; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
-pars       = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT-den.json';
+test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 8 subjects (holly)
+pars       = '/home/mbrud/Dropbox/PhD/Data/pars/batch-preprocessing-toolbox/CT-vx-den.json';
 
 %--------------------------------------------------------------------------
 % OBS! Below parameters need to be set (for FIL users)
@@ -42,7 +42,7 @@ holly.clean         = false;
 holly.clean_init    = true;
 holly.verbose       = true;
 holly.job.batch     = true;
-holly.job.mem       = '8G';
+holly.job.mem       = '12G';
 holly.job.est_mem   = true;
 holly.job.use_dummy = false;
 
@@ -77,7 +77,7 @@ print_progress('Finished');
 
 % Show the preprocessing results
 m = 1; 
-spm_misc('browse_subjects',obj{m}{1}.dir_preproc_2d,obj{m}{1}.modality);
+spm_misc('browse_subjects',obj{m}{1}.dir_preproc,obj{m}{1}.modality);
 %==========================================================================
 
 %==========================================================================
