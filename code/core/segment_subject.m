@@ -13,9 +13,9 @@ obj.biasfwhm = 60*ones(1,N);
 obj.mrf      = 2;    
 obj.cleanup  = 1;   
 
-if strcmp(modality,'CT')
+if strcmpi(modality,'CT')
     obj.biasreg  = 10; 
-elseif strcmp(modality,'MRI')
+elseif strcmpi(modality,'MRI')
     obj.biasreg  = 1e-3*(1/5)*ones(1,N);    
 end
 

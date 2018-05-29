@@ -1,9 +1,9 @@
 function lambda = estimate_lambda(fname,modality,lambda_ct,verbose)
 if nargin<4, verbose = false; end
 
-if strcmp(modality,'CT')
+if strcmpi(modality,'CT')
     lambda = lambda_ct; % Seems empirically like a good value
-elseif strcmp(modality,'MRI')
+elseif strcmpi(modality,'MRI')
     n = nifti(fname);
     X = single(n.dat(:,:,:));
 

@@ -1,207 +1,209 @@
-function pars = preproc_default(pars,test_level)
+function [job,holly] = preproc_default(job,test_level)
 if nargin<2, test_level = 0; end
 
-if isstring(pars) || ischar(pars)
+if isstring(job) || ischar(job)
     % Parameters are in a JSON-file
-    pars = parse_json(pars);
+    job = spm_jsonread(job);
 end
 
 % Data-set specific parameters (m=1,...,M)
 %--------------------------------------------------------------------------
-if ~isfield(pars,'dat'), 
-    error('pars.dat needs to be defined!'); 
+if ~isfield(job,'dir_population'), 
+    error('pars.dir_population needs to be defined!'); 
 end
 
-M = numel(pars.dat);
-for m=1:M
-    if ~isfield(pars.dat{m},'dir_data'), 
-        error('pars.dat.dir_data needs to be defined!'); 
-    end
-    
-    % General parameters
-    %----------------------------------------------------------------------    
-    if ~isfield(pars.dat{m},'S')
-        pars.dat{m}.S = Inf;        
-    end    
-    if     test_level==2 || test_level==3, pars.dat{m}.S = min(8,pars.dat{m}.S);
-    elseif test_level==1                   pars.dat{m}.S = 1;   
-    end     
-    if ~isfield(pars.dat{m},'modality')
-        pars.dat{m}.modality = 'MRI';
-    end    
-    if ~isfield(pars.dat{m},'dir_preproc')
-        pars.dat{m}.dir_preproc = '';
-    end    
-    
-    % Pre-processing parameters
-    %----------------------------------------------------------------------
-    if ~isfield(pars.dat{m},'preproc')
-        pars.dat{m}.preproc = struct;
-    end
-    if ~isfield(pars.dat{m}.preproc,'tol_dist')
-        pars.dat{m}.preproc.tol_dist = 4;
-    end
-    if ~isfield(pars.dat{m}.preproc,'tol_vx')
-        pars.dat{m}.preproc.tol_vx = 5;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_coreg')
-        pars.dat{m}.preproc.do_coreg = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_reslice')
-        pars.dat{m}.preproc.do_reslice = false;
-    end    
-    if ~isfield(pars.dat{m}.preproc,'do_realign2mni')
-        pars.dat{m}.preproc.do_realign2mni = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_crop')
-        pars.dat{m}.preproc.do_crop = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_rem_neck')
-        pars.dat{m}.preproc.do_rem_neck = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_skull_strip')
-        pars.dat{m}.preproc.do_skull_strip = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'do_superres')
-        pars.dat{m}.preproc.do_superres = false;
-    end    
-    if ~isfield(pars.dat{m}.preproc,'do_denoise')
-        pars.dat{m}.preproc.do_denoise = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'write_2d')
-        pars.dat{m}.preproc.write_2d = false;
-    end
-    if ~isfield(pars.dat{m}.preproc,'axis_2d')
-        pars.dat{m}.preproc.axis_2d = 3;
-    end    
-    if ~isfield(pars.dat{m}.preproc,'vx')
-        pars.dat{m}.preproc.vx = [];
-    end
-    if ~isfield(pars.dat{m}.preproc,'write_tc')
-        pars.dat{m}.preproc.write_tc = [false(6,1) false(6,1) false(6,1) false(6,1)];        
-    end    
-    if ~isfield(pars.dat{m}.preproc,'do_bf_correct')
-        pars.dat{m}.preproc.do_bf_correct = false;        
-    end    
-    if ~isfield(pars.dat{m}.preproc,'write_bf')
-        pars.dat{m}.preproc.write_bf = false(1,2);
-    end    
-    if ~isfield(pars.dat{m}.preproc,'write_df')
-        pars.dat{m}.preproc.write_df = false(1,2);
-    end    
-    if ~isfield(pars.dat{m}.preproc,'make_ml_labels')
-        pars.dat{m}.preproc.make_ml_labels = false;
-    end 
-    if ~isfield(pars.dat{m}.preproc,'normalise_intensities')
-        pars.dat{m}.preproc.normalise_intensities = false;
-    end 
-    
-    % Super-resolution parameters
-    %----------------------------------------------------------------------
-    if ~isfield(pars.dat{m}.preproc,'superres')
-        pars.dat{m}.preproc.superres = struct;
-    end
-    if ~isfield(pars.dat{m}.preproc.superres,'verbose')
-        pars.dat{m}.preproc.superres.verbose = false;
-    end        
-    if ~isfield(pars.dat{m}.preproc.superres,'vx')
-        pars.dat{m}.preproc.superres.vx = [1 1 1];
-    end    
-    if ~isfield(pars.dat{m}.preproc.superres,'proj_mat')
-        pars.dat{m}.preproc.superres.proj_mat = 'sinc';
-    end    
-    
-    if ~isfield(pars.dat{m}.preproc.superres,'admm')
-        pars.dat{m}.preproc.superres.admm = struct;
-    end
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'rho')
-        pars.dat{m}.preproc.superres.admm.rho = 0.25;
-    end        
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'niter')
-        pars.dat{m}.preproc.superres.admm.niter = 50;
-    end       
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'tol')
-        pars.dat{m}.preproc.superres.admm.tol = 1e-4;
-    end  
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'verbose')
-        pars.dat{m}.preproc.superres.admm.verbose = false;
-    end  
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'mu')
-        pars.dat{m}.preproc.superres.admm.mu = 10;
-    end  
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'alpha')
-        pars.dat{m}.preproc.superres.admm.alpha = 2;
-    end     
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'cgs_niter')
-        pars.dat{m}.preproc.superres.admm.cgs_niter = 10;
-    end  
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'cgs_tol')
-        pars.dat{m}.preproc.superres.admm.cgs_tol = 1e-3;
-    end   
-    if ~isfield(pars.dat{m}.preproc.superres.admm,'est_rho')
-        pars.dat{m}.preproc.superres.admm.est_rho = false;
-    end       
-    
-    % Denoising parameters
-    %----------------------------------------------------------------------
-    if ~isfield(pars.dat{m}.preproc,'denoise')
-        pars.dat{m}.preproc.denoise = struct;
-    end
-    if ~isfield(pars.dat{m}.preproc.denoise,'verbose')
-        pars.dat{m}.preproc.denoise.verbose = false;
-    end    
-    if ~isfield(pars.dat{m}.preproc.denoise,'lambda_ct')
-        pars.dat{m}.preproc.denoise.lambda_ct = 1e-1;
-    end    
-    
-    if ~isfield(pars.dat{m}.preproc.denoise,'admm')
-        pars.dat{m}.preproc.denoise.admm = struct;
-    end
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'rho')
-        pars.dat{m}.preproc.denoise.admm.rho = 0.25;
-    end        
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'niter')
-        pars.dat{m}.preproc.denoise.admm.niter = 30;
-    end       
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'tol')
-        pars.dat{m}.preproc.denoise.admm.tol = 1e-5;
-    end  
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'verbose')
-        pars.dat{m}.preproc.denoise.admm.verbose = false;
-    end      
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'mu')
-        pars.dat{m}.preproc.denoise.admm.mu = 10;
-    end  
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'alpha')
-        pars.dat{m}.preproc.denoise.admm.alpha = 2;
-    end     
-    if ~isfield(pars.dat{m}.preproc.denoise.admm,'est_rho')
-        pars.dat{m}.preproc.denoise.admm.est_rho = false;
-    end       
+% General parameters
+%----------------------------------------------------------------------    
+if ~isfield(job,'S')
+    job.S = Inf;
+elseif isempty(job.S)
+    job.S = Inf;
+elseif strcmpi(job.S,'inf')
+    job.S = Inf;
+end    
+if test_level==1
+    job.S = min(1,job.S); 
+elseif test_level==2
+    job.S = min(8,job.S); 
+elseif test_level==3
+    job.S = min(16,job.S); 
+end     
+if ~isfield(job,'dir_preproc')
+    error('~isfield(pars,''dir_preproc'')')
+end    
+if ~isfield(job,'write_2d')
+    job.write_2d = false;
 end
-%==========================================================================
+if job.write_2d && ~isfield(job,'dir_2d')
+    error('~isfield(pars,''dir_2d'')')
+elseif ~isfield(job,'dir_2d')
+    job.dir_2d = '';
+end   
+if ~isfield(job,'axis_2d')
+    job.axis_2d = 3;
+end    
 
-%==========================================================================
-function pars = parse_json(pth)
-pars = spm_jsonread(pth);
-M    = numel(pars.dat);
+% Pre-processing parameters
+%----------------------------------------------------------------------
+if ~isfield(job,'preproc')
+    job.preproc = struct;
+end
+if ~isfield(job.preproc,'tol_dist')
+    job.preproc.tol_dist = 4;
+end
+if ~isfield(job.preproc,'tol_vx')
+    job.preproc.tol_vx = 5;
+end
+if ~isfield(job.preproc,'do_coreg')
+    job.preproc.do_coreg = false;
+end
+if ~isfield(job.preproc,'do_reslice')
+    job.preproc.do_reslice = false;
+end    
+if ~isfield(job.preproc,'do_realign2mni')
+    job.preproc.do_realign2mni = false;
+end
+if ~isfield(job.preproc,'do_crop')
+    job.preproc.do_crop = false;
+end
+if ~isfield(job.preproc,'do_rem_neck')
+    job.preproc.do_rem_neck = false;
+end
+if ~isfield(job.preproc,'do_skull_strip')
+    job.preproc.do_skull_strip = false;
+end
+if ~isfield(job.preproc,'do_superres')
+    job.preproc.do_superres = false;
+end    
+if ~isfield(job.preproc,'do_denoise')
+    job.preproc.do_denoise = false;
+end    
+if ~isfield(job.preproc,'vx')
+    job.preproc.vx = [];
+end
+if ~isfield(job.preproc,'normalise_intensities')
+    job.preproc.normalise_intensities = false;
+end 
+if ~isfield(job.preproc,'do_bf_correct')
+    job.preproc.do_bf_correct = false;        
+end    
 
-if isstruct(pars.dat)
-    % Convert dat from struct-array to cell-array    
-    opars    = pars;
-    pars     = rmfield(pars,'dat');    
-    pars.dat = cell(1,M);
-    for m=1:M
-        pars.dat{m} = opars.dat(m);
-    end
+% Segmentation parameters
+%----------------------------------------------------------------------
+if ~isfield(job,'segment')
+    job.segment = struct;
+end
+if ~isfield(job.segment,'write_tc')
+    job.segment.write_tc = false;        
+end    
+if ~isfield(job.segment,'write_bf')
+    job.segment.write_bf = false;
+end    
+if ~isfield(job.segment,'write_df')
+    job.segment.write_df = false;
+end    
+if ~isfield(job.segment,'make_ml_labels')
+    job.segment.make_ml_labels = false;
+end 
+
+% Super-resolution parameters
+%----------------------------------------------------------------------
+if ~isfield(job.preproc,'superres')
+    job.preproc.superres = struct;
+end
+if ~isfield(job.preproc.superres,'verbose')
+    job.preproc.superres.verbose = false;
+end        
+if ~isfield(job.preproc.superres,'vx')
+    job.preproc.superres.vx = [1 1 1];
+end    
+if ~isfield(job.preproc.superres,'proj_mat')
+    job.preproc.superres.proj_mat = 'sinc';
+end    
+
+if ~isfield(job.preproc.superres,'admm')
+    job.preproc.superres.admm = struct;
+end
+if ~isfield(job.preproc.superres.admm,'rho')
+    job.preproc.superres.admm.rho = 1;
+end        
+if ~isfield(job.preproc.superres.admm,'niter')
+    job.preproc.superres.admm.niter = 50;
+end       
+if ~isfield(job.preproc.superres.admm,'tol')
+    job.preproc.superres.admm.tol = 1e-5;
+end  
+if ~isfield(job.preproc.superres.admm,'verbose')
+    job.preproc.superres.admm.verbose = false;
+end  
+if ~isfield(job.preproc.superres.admm,'mu')
+    job.preproc.superres.admm.mu = 10;
+end  
+if ~isfield(job.preproc.superres.admm,'alpha')
+    job.preproc.superres.admm.alpha = 2;
+end     
+if ~isfield(job.preproc.superres.admm,'cgs_niter')
+    job.preproc.superres.admm.cgs_niter = 10;
+end  
+if ~isfield(job.preproc.superres.admm,'cgs_tol')
+    job.preproc.superres.admm.cgs_tol = 1e-3;
+end   
+if ~isfield(job.preproc.superres.admm,'est_rho')
+    job.preproc.superres.admm.est_rho = false;
+end       
+
+% Denoising parameters
+%----------------------------------------------------------------------
+if ~isfield(job.preproc,'denoise')
+    job.preproc.denoise = struct;
+end
+if ~isfield(job.preproc.denoise,'verbose')
+    job.preproc.denoise.verbose = false;
+end    
+if ~isfield(job.preproc.denoise,'lambda_ct')
+    job.preproc.denoise.lambda_ct = 1;
+end    
+
+if ~isfield(job.preproc.denoise,'admm')
+    job.preproc.denoise.admm = struct;
+end
+if ~isfield(job.preproc.denoise.admm,'rho')
+    job.preproc.denoise.admm.rho = 1;
+end        
+if ~isfield(job.preproc.denoise.admm,'niter')
+    job.preproc.denoise.admm.niter = 50;
+end       
+if ~isfield(job.preproc.denoise.admm,'tol')
+    job.preproc.denoise.admm.tol = 1e-5;
+end  
+if ~isfield(job.preproc.denoise.admm,'verbose')
+    job.preproc.denoise.admm.verbose = false;
+end      
+if ~isfield(job.preproc.denoise.admm,'mu')
+    job.preproc.denoise.admm.mu = 10;
+end  
+if ~isfield(job.preproc.denoise.admm,'alpha')
+    job.preproc.denoise.admm.alpha = 2;
+end     
+if ~isfield(job.preproc.denoise.admm,'est_rho')
+    job.preproc.denoise.admm.est_rho = false;
+end   
+
+% Holly stuff
+%----------------------------------------------------------------------
+if ~isfield(job,'holly')
+    holly = struct;
+else
+    holly = job.holly;
 end
 
-% Some cleaning up
-for m=1:M
-    if isfield(pars.dat{m},'S')
-        if isempty(pars.dat{m}.S)
-            pars.dat{m}.S = Inf;
-        end
-    end
+if     test_level==1, holly.mode = 'for';
+elseif test_level==2, holly.mode = 'parfor';
+end
+
+holly = distribute_default(holly);
+
+if size(holly.translate,1)>1
+    holly.translate = holly.translate';
 end
 %==========================================================================

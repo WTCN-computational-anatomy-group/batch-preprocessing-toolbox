@@ -1,5 +1,5 @@
 %==========================================================================
-function create_2d_slice(fname,axis_2d)
+function nfname1 = create_2d_slice(fname,axis_2d)
 V  = spm_vol(fname);
 vx = spm_misc('vxsize',V.mat);
 

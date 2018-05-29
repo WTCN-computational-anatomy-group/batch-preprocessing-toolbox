@@ -1,131 +1,147 @@
-function obj = spm_superres(obj)
+function nii_out = spm_superres(img,modality,opt)
+
+% Sanity-check for super-resolution
+%--------------------------------------------------------------------------
+if ~ismember(modality,{'MRI'})
+    error('~ismember(modality, {''MRI''})')
+end
 
 % Parameters
 %--------------------------------------------------------------------------
-vx1       = obj.preproc.superres.vx;
-V         = obj.scans;
-N         = numel(V);
-pars_sr   = obj.preproc.superres;
-pars_admm = pars_sr.admm;
-proj_mat  = pars_sr.proj_mat;
-trunc_ct  = pars_sr.trunc_ct;
+C         = numel(img);
+vx1       = opt.vx;
+proj_mat  = opt.proj_mat;
+
+% Estimate model parameters (sd,lambda)
+%--------------------------------------------------------------------------
+sd    = cell(1,C);
+lambda = zeros(1,C);
+for c=1:C
+    N       = numel(img{c});
+    sd{c}   = zeros(1,N);
+    lambda1 = zeros(1,N);
+    for n=1:N
+        vx0 = spm_misc('vxsize',img{c}(n).mat);
+        scl = max(prod(vx0),1); % Ad-hoc fudge-factor
+        
+        sd{c}(n) = estimate_sd(img{c}(n).dat.fname,modality);
+        sd{c}(n) = scl*sd{c}(n);
+        
+        lambda1(n) = estimate_lambda(img{c}(n).dat.fname,modality);
+    end
+    lambda(c) = mean(lambda1);
+end
+
+% % Down-sample inplane
+% %--------------------------------------------------------------------------
+% for c=1:C
+%     N = numel(img{c});
+%     for n=1:N
+%         img{c}(n) = downsample_inplane(img{c}(n),vx1);
+%     end
+% end
 
 % Get LR images
 %--------------------------------------------------------------------------
-X   = {};
-msk = {};
-for n=1:N
-    I = numel(V{n});
-    for i=1:I
-        Nii                   = nifti(V{n}{i}.fname);        
-        X{n}{i}               = single(Nii.dat(:,:,:)); % Observed data
-        msk{n}{i}             = spm_misc('msk_modality',X{n}{i},obj.modality); % Mask
-        X{n}{i} (~msk{n}{i} ) = NaN;        
+X   = cell(1,C);
+msk = cell(1,C);
+for c=1:C % Loop over channels
+    N = numel(img{c}); % Loop over within-channel images
+    for n=1:N   
+        X{c}{n}             = single(img{c}(n).dat(:,:,:)); 
+        msk{c}{n}           = spm_misc('msk_modality',X{c}{n},modality); 
+        X{c}{n}(~msk{c}{n}) = NaN;        
     end
 end
 
 % Compute super-resolved images' orientation matrix and dimensions
 %--------------------------------------------------------------------------
-if V{1}{1}.dim(3)>1
-    pth = {};
-    cnt = 1;
-    for n=1:N
-        I = numel(V{n});
-        for i=1:I
-            pth{cnt} = V{n}{i}.fname;
-            cnt      = cnt + 1;
-        end
-    end
-    [M1,dm1] = max_bb_orient(nifti(char(pth)),vx1);
+is2d = size(X{1}{1},3)==1;
+
+if ~is2d
+    [mat1,dm1] = max_bb_orient(img,vx1);
 else
-    % Image is 2D (for testing)
-    M0  = V{1}{1}.mat;
-    vx0 = spm_misc('vxsize',M0);    
-    dm0 = V{1}{1}.dim;
-    d   = vx0./vx1;
-    D   = diag([d 1]);
-    
-    M1     = M0/D;
-    dm1    = floor(D(1:3,1:3)*dm0')';
-    dm1(3) = 1;
+    error('is2d');
+%     M0  = V{1}{1}.mat;
+%     vx0 = spm_misc('vxsize',M0);    
+%     dm0 = V{1}{1}.dim;
+%     d   = vx0./vx1;
+%     D   = diag([d 1]);
+%     
+%     M1     = M0/D;
+%     dm1    = floor(D(1:3,1:3)*dm0')';
+%     dm1(3) = 1;
 end
 
 % Initialise projection matrices (A)
 %--------------------------------------------------------------------------
-dat = {};
-for n=1:N
-    dat{n}.mat      = M1;
-    dat{n}.dm       = dm1;
-    dat{n}.proj_mat = proj_mat;    
-    dat{n}          = init_A(V{n},dat{n});         
+dat = cell(1,C);
+for c=1:C
+    dat{c}.mat      = mat1;
+    dat{c}.dm       = dm1;
+    dat{c}.proj_mat = proj_mat;    
+    dat{c}          = init_proj_mat(img{c},dat{c});         
 end
 
-% Estimate model parameters (tau,lambda)
+% Get a starting estimate using linear interpolation (Y0)
 %--------------------------------------------------------------------------
-tau    = cell(1,N);
-lambda = zeros(1,N);
-for n=1:N
-    I       = numel(V{n});
-    tau{n}  = zeros(1,I);
-    lambda1 = zeros(1,I);
-    for i=1:I
-        tau{n}(i)  = estimate_tau(V{n}{i}.fname,obj.modality);
-        lambda1(i) = estimate_lambda(V{n}{i}.fname,obj.modality);
-    end
-    lambda(n) = mean(lambda1);
-end
-
+Y0 = get_starting_estimate(X,dat,vx1,dm1,mat1);
+  
 % Run algorithm
 %--------------------------------------------------------------------------
-Y = admm_superres(X,dat,tau,lambda,dm1,vx1,pars_admm);
+Y = admm_superres(X,Y0,dat,sd,lambda,dm1,vx1,opt.admm);
+
+% Clean FOV
+%--------------------------------------------------------------------------
+for c=1:C    
+    Y{c} = clean_fov(Y{c},dat{c});
+end
 
 % Make integer
-for n=1:N
-    Y{n} = round(Y{n});
-    if strcmp(obj.modality,'MRI')
-        Y{n}(Y{n}<0) = 0;
+%--------------------------------------------------------------------------
+for c=1:C
+    Y{c} = round(Y{c});
+    if strcmpi(modality,'MRI')
+        Y{c}(Y{c}<0) = 0;
     end
 end
 
 % Write results
 %--------------------------------------------------------------------------
-fnames = {};
-cnt    = 1;
-for n=1:N
-    [pth,nam,ext] = fileparts(V{n}{1}.fname);
-    nfname        = fullfile(pth,['sr_' nam ext]);
-    spm_misc('create_nii',nfname,Y{n},M1,V{n}{1}.dt,'super-resolved');          
-    
-    V1(n) = spm_vol(nfname);
-    
-    for i=1:numel(V{n})
-        fnames{cnt} = V{n}{i}.fname;
-        cnt         = cnt + 1;
+fnames  = {};
+nii_out = nifti;
+dtype   = img{1}(1).dat.dtype;
+for c=1:C
+    N = numel(img{c});
+    for n=1:N
+        fname           = img{c}(n).dat.fname;
+        fnames{end + 1} = fname;    
     end
     
-    fnames{cnt} = nfname;
-    cnt         = cnt + 1;
+    [pth,nam,ext]   = fileparts(fname);
+    nfname          = fullfile(pth,['sr_' nam ext]);
+    spm_misc('create_nii',nfname,Y{c},mat1,dtype,'super-resolved');            
+    nii_out(c)      = nifti(nfname);        
+    fnames{end + 1} = nfname;
 end
 
-if pars_sr.verbose
+if opt.verbose
     % Visualise result
     spm_check_registration(char(fnames))
 end
 
 % Delete input data
-for n=1:N
-    obj.scans{n}    = {};
-    obj.scans{n}{1} = V1(n);
-    
-    I = numel(V{n});
-    for i=1:I 
-        delete(V{n}{i}.fname);
+for c=1:C
+    N = numel(img{c});
+    for n=1:N
+        fname = img{c}(n).dat.fname;
+        delete(fname);
     end
 end
 %==========================================================================
 
 %==========================================================================
-function Y = admm_superres(X,dat,tau,lambda,dm,vx,pars)
+function Y = admm_superres(X,Y,dat,sd,lambda,dm,vx,pars)
 
 % Set parameters
 % -------------------------------------------------------------------------
@@ -139,62 +155,57 @@ cgs_tol   = pars.cgs_tol;
 cgs_niter = pars.cgs_niter;
 est_rho   = pars.est_rho;
 
-N   = numel(lambda); % Number of modalities
-ndm = 3; if dm(3)==1, ndm = 2; end % Number of dimensions
+C   = numel(lambda); % Number of channels
+ndm = 3; % Number of dimensions
+if dm(3)==1, 
+    ndm = 2; 
+end 
 
-nonneg = true(1,N);
-for n=1:N
-    I = numel(X{n});
-    for i=1:I
-        X{n}{i}(~isfinite(X{n}{i})) = 0;    
-        if sum(sum(sum(X{n}{i}<0)))
-           nonneg(n) = false;
+nonneg = true(1,C);
+for c=1:C
+    N = numel(X{c});
+    for n=1:N
+        X{c}{n}(~isfinite(X{c}{n})) = 0;    
+        if sum(sum(sum(X{c}{n}<0)))
+           nonneg(c) = false;
         end
     end
 end
 
+% Get total number of observed voxels
+nm = 0;
+for c=1:C
+    N = numel(X{c});
+    for n=1:N
+        nm = nm + numel(X{c}{n});
+    end
+end
+
+tau = cell(1,C);
+for c=1:C
+    tau{c} = 1./(sd{c}.^2);
+end
+
 % Define Laplace prior (in Fourier space)
 % -------------------------------------------------------------------------
-L = zeros(dm);
-if dm(1)>=2
-    tmp        = 1/(vx(1)^2);
-    L(  1,1,1) = L(  1,1,1) + tmp*2;
-    L(  2,1,1) = L(  2,1,1) - tmp;
-    L(end,1,1) = L(end,1,1) - tmp;
-end
-if dm(2)>=2
-    tmp        = 1/(vx(2)^2);
-    L(1,  1,1) = L(1,  1,1) + tmp*2;
-    L(1,  2,1) = L(1,  2,1) - tmp;
-    L(1,end,1) = L(1,end,1) - tmp;
-end
-if dm(3)>=2
-    tmp        = 1/(vx(3)^2);
-    L(1,1,  1) = L(1,1,  1) + tmp*2;
-    L(1,1,  2) = L(1,1,  2) - tmp;
-    L(1,1,end) = L(1,1,end) - tmp;
-end
-L     = single(fftn(L));
-prior = @(Y) real(ifftn(fftn(Y).*L));
+prior = laplace_prior(dm,vx);
 
 % Initialize algorithm variables
 % -------------------------------------------------------------------------
-Y = cell(N,1);
-W = cell(N,ndm);
-U = cell(N,ndm);
-for n=1:N
-    Y{n} = zeros(dm,'single');
+W = cell(C,ndm);
+U = cell(C,ndm);
+for c=1:C
     for d=1:ndm
-        W{n,d} = zeros(dm,'single');
-        U{n,d} = zeros(dm,'single');
+        W{c,d} = zeros(dm,'single');
+        U{c,d} = zeros(dm,'single');
     end
 end
   
 % Calculate gradients (gx,gy,gz)
 %-------------------------------------------------------------------------
-D = cell(N,ndm);
-for n=1:N
-    [D{n,1:ndm}] = spm_imbasics('grad',Y{n},vx);
+D = cell(C,ndm);
+for c=1:C
+    [D{c,1:ndm}] = spm_imbasics('grad',Y{c},vx);
 end
 
 % Main loop
@@ -204,12 +215,15 @@ for iter=1:niter
 
     % ---------------------------------------------------------------------
     % Sub-problem U
-    oU    = U;
+    if est_rho
+        oU = U;
+    end
+    
     Unorm = single(eps);
-    for n=1:N
+    for c=1:C
         for d=1:ndm
-            U{n,d} = lambda(n)*D{n,d}+(1/rho)*W{n,d};
-            Unorm  = Unorm + U{n,d}.^2;
+            U{c,d} = lambda(c)*D{c,d}+(1/rho)*W{c,d};
+            Unorm  = Unorm + U{c,d}.^2;
         end
     end
     Unorm = sqrt(Unorm);
@@ -217,45 +231,45 @@ for iter=1:niter
     clear Unorm
     
     scale(~isfinite(scale)) = 0;            
-    for n=1:N
+    for c=1:C
         for d=1:ndm
-            U{n,d} = U{n,d}.*scale;
+            U{c,d} = U{c,d}.*scale;
         end
     end
     clear scale
     
     % Sub-problem Y
     % ---------------------------------------------------------------------
-    for n=1:N
+    for c=1:C
         % Compute divergence
         if ndm==3
-            DtU = lambda(n)*spm_imbasics('dive',U{n,:},vx);
-            DtW = lambda(n)*spm_imbasics('dive',W{n,:},vx);
+            DtU = lambda(c)*spm_imbasics('dive',U{c,:},vx);
+            DtW = lambda(c)*spm_imbasics('dive',W{c,:},vx);
         else
-            DtU = lambda(n)*spm_imbasics('dive',U{n,:},[],vx);
-            DtW = lambda(n)*spm_imbasics('dive',W{n,:},[],vx);
+            DtU = lambda(c)*spm_imbasics('dive',U{c,:},[],vx);
+            DtW = lambda(c)*spm_imbasics('dive',W{c,:},[],vx);
         end
 
-        LHS = @(Y) AtA(Y,@(Y) lambda(n)^2*prior(Y),tau{n}/rho,1,dat{n});
-        RHS = DtU - (1/rho)*DtW + (1/rho)*At(X{n},tau{n},dat{n});
+        LHS = @(Y) AtA(Y,@(Y) lambda(c)^2*prior(Y),tau{c}/rho,1,dat{c});
+        RHS = DtU - (1/rho)*DtW + (1/rho)*At(X{c},tau{c},dat{c});
         clear DtU DtW
         
         % Solve least-squares problem
-        Y{n} = cg_image_solver(LHS,RHS,Y{n},cgs_niter,cgs_tol);
+        Y{c} = cg_image_solver(LHS,RHS,Y{c},cgs_niter,cgs_tol);
         clear RHS LHS
         
-        if nonneg(n)
+        if nonneg(c)
             % Non-negativity 'constraint'
-            Y{n}(Y{n}<0) = 0;
+            Y{c}(Y{c}<0) = 0;
         end
     end
 
     % Sub-problem W
     % ---------------------------------------------------------------------
-    for n=1:N
-        [D{n,1:ndm}] = spm_imbasics('grad',Y{n},vx);
+    for c=1:C
+        [D{c,1:ndm}] = spm_imbasics('grad',Y{c},vx);
         for d=1:ndm
-            W{n,d} = W{n,d} + rho*(lambda(n)*D{n,d} - U{n,d});
+            W{c,d} = W{c,d} + rho*(lambda(c)*D{c,d} - U{c,d});
         end
     end
 
@@ -265,26 +279,29 @@ for iter=1:niter
     ll  = [ll,ll1];    
     
     d1 = abs((ll(end - 1)*(1 + 10*eps) - ll(end))/ll(end));
+    d2 = ll(end) - ll(end - 1);
     
     if verbose
-        fprintf('%2d | %8.7f %8.7f %8.7f\n',iter,ll1,d1,rho);
+        fprintf('%2d | %8.7f %8.7f %8.7f %8.7f %8.7f\n',iter,ll1,d1,d2,1e-4*nm,rho);
+        
+        show_img(X,Y,lambda,sd,'MRI','Super-resolution');
     end    
     
-    if iter>=20 && d1<tol
-        % Finished
-        break; 
-    end        
+%     if iter>=20 && d1<tol
+%         % Finished
+%         break; 
+%     end        
    
     if est_rho
         % Compute primal and dual residuals
         %------------------------------------------------------------------
         primal_res = 0;
         dual_res   = 0;
-        for n=1:N
+        for c=1:C
             tmp = cell(1,ndm);
             for d=1:ndm
-                primal_res = primal_res + sum(sum(sum((D{n,d} + U{n,d}).^2)));
-                tmp{d}     = U{n,d} - oU{n,d};
+                primal_res = primal_res + sum(sum(sum((D{c,d} + U{c,d}).^2)));
+                tmp{d}     = U{c,d} - oU{c,d};
             end
             if ndm==3
                 tmp = rho*spm_imbasics('dive',tmp{:},vx);
@@ -309,9 +326,9 @@ for iter=1:niter
             scale = alpha;
         end
         if scale~=1
-            for n=1:N
+            for c=1:C
                 for d=1:ndm
-                    W{n,d} = W{n,d}*scale;
+                    W{c,d} = W{c,d}*scale;
                 end
             end
         end  
@@ -321,22 +338,26 @@ end
 
 %==========================================================================
 function ll = log_likelihood(X,Y,D,dat,tau,lambda)
-N     = numel(X);
-ndm   = numel(size(X{1}));
-likel = 0;
-prior = 0;
-for n=1:N
-    AY = A(Y{n},X{n},dat{n});
-    for i=1:numel(X{n})
-        likel = likel + 0.5*tau{n}(i)*sum(sum(sum((AY{i} - X{n}{i}).^2)));     
+C   = numel(X);
+ndm = numel(size(X{1}));
+ll1 = 0;
+llr = 0;
+for c=1:C
+    N  = numel(X{c});
+    AY = A(Y{c},X{c},dat{c});
+    for n=1:N
+        I     = numel(X{c}{n});
+        sd    = sqrt(1/tau{c}(n));
+        diff1 = (AY{n} - X{c}{n});
+        diff1 = diff1(:)'*diff1(:);
+        ll1   = ll1 + 0.5*(2*I*log(sd) + I*log(2*pi) + 1/sd^2*diff1);
     end
-    clear AY
     
     for d=1:ndm
-        prior = prior + (lambda(n)^2)*(D{n,d}.^2);
+        llr = llr + (lambda(c)^2)*(D{c,d}.^2);
     end
 end
-ll = -likel - sum(sum(sum(sqrt(prior))));
+ll = -ll1 - sum(sum(sum(sqrt(llr))));
 %==========================================================================
 
 %==========================================================================
@@ -345,38 +366,38 @@ if strcmp(dat.proj_mat,'sinc')
     Y(~isfinite(Y)) = 0;
     Y               = fftn(Y);    
 end
-for i=1:dat.I   
-    T = dat.mat\dat.A(i).mat;
-    y = make_deformation(T,dat.A(i).dm);
+for n=1:dat.N
+    T = dat.mat\dat.A(n).mat;
+    y = make_deformation(T,dat.A(n).dm);
     
     if strcmp(dat.proj_mat,'sinc')       
-        tmp  = real(ifftn(Y.*dat.A(i).S));                      
+        tmp  = real(ifftn(Y.*dat.A(n).S));                      
     elseif strcmp(dat.proj_mat,'smo')
         tmp = zeros(size(Y),'single');
-        spm_smooth(Y,tmp,dat.A(i).S);
+        spm_smooth(Y,tmp,dat.A(n).S);
     end
     
-    X{i} = samp0(tmp,y); 
+    X{n} = samp0(tmp,y); 
 end
 %==========================================================================  
 
 %==========================================================================
 function Y = At(X,tau,dat)  
 Y = single(0);   
-for i=1:dat.I        
-    T = dat.mat\dat.A(i).mat;
-    y = make_deformation(T,dat.A(i).dm);
+for n=1:dat.N      
+    T = dat.mat\dat.A(n).mat;
+    y = make_deformation(T,dat.A(n).dm);
     
-    tmp = spm_diffeo('push',X{i},y,dat.dm);     
+    tmp = spm_diffeo('push',X{n},y,dat.dm);     
     tmp(~isfinite(tmp)) = 0;
     
     if strcmp(dat.proj_mat,'sinc')               
-        tmp                 = real(ifftn(fftn(tmp).*dat.A(i).S));                    
+        tmp = real(ifftn(fftn(tmp).*dat.A(n).S));                    
     elseif strcmp(dat.proj_mat,'smo')
-        spm_smooth(tmp,tmp,dat.A(i).S); 
+        spm_smooth(tmp,tmp,dat.A(n).S); 
     end 
     
-    Y = Y + tau(i).*tmp;    
+    Y = Y + tau(n).*tmp;    
 end
 %==========================================================================
 
@@ -388,15 +409,15 @@ if strcmp(dat.proj_mat,'sinc')
     F(~isfinite(F)) = 0;
     F               = fftn(F);    
 end
-for i=1:dat.I        
-    T = dat.mat\dat.A(i).mat;
-    y = make_deformation(T,dat.A(i).dm);
+for n=1:dat.N
+    T = dat.mat\dat.A(n).mat;
+    y = make_deformation(T,dat.A(n).dm);
         
     if strcmp(dat.proj_mat,'sinc')      
-        tmp = real(ifftn(F.*dat.A(i).S));    
+        tmp = real(ifftn(F.*dat.A(n).S));    
     elseif strcmp(dat.proj_mat,'smo') 
         tmp = zeros(size(Y),'single');
-        spm_smooth(Y,tmp,dat.A(i).S); 
+        spm_smooth(Y,tmp,dat.A(n).S); 
     end
     
     tmp                 = samp0(tmp,y); 
@@ -404,12 +425,12 @@ for i=1:dat.I
     tmp(~isfinite(tmp)) = 0;
         
     if strcmp(dat.proj_mat,'sinc')                                          
-        tmp = real(ifftn(fftn(tmp).*dat.A(i).S));    
+        tmp = real(ifftn(fftn(tmp).*dat.A(n).S));    
     elseif strcmp(dat.proj_mat,'smo')
-        spm_smooth(tmp,tmp,dat.A(i).S);    
+        spm_smooth(tmp,tmp,dat.A(n).S);    
     end    
     
-    Y1 = Y1 + tau(i).*tmp;
+    Y1 = Y1 + tau(n).*tmp;
 end
 
 Y1 = Y1 + lambda*prior(Y);
@@ -426,9 +447,11 @@ if nargin<6, verbose = false; end
 %--------------------------------------------------------------------------
 normRHS = sqrt(sum(RHS(:).*RHS(:))); % Norm of RHS
 R       = RHS - LHS(Y);              % Residual RHS - LHS(x)
-normR   = sum(R(:).*R(:));           % R'R
-P       = R;                         % Initial conjugate directions P
-beta    = 0;                         % Initial search direction for new P
+clear RHS
+
+normR = sum(R(:).*R(:));           % R'R
+P     = R;                         % Initial conjugate directions P
+beta  = 0;                         % Initial search direction for new P
 
 if verbose
     fprintf('%g %g\n', normRHS, sqrt(normR));
@@ -446,24 +469,25 @@ while sqrt(normR) > tol*normRHS,
     %----------------------------------------------------------------------
     AtAP  = LHS(P);
     alpha = normR / sum(P(:).*AtAP(:));
-
+    
     % Perform conj. gradient descent, obtaining updated X and R, using the calculated
     % P and alpha
     %----------------------------------------------------------------------
     Y = Y + alpha *P; 
     R = R - alpha*AtAP;
-
-    % Finds the step size for updating P
-    %----------------------------------------------------------------------
-    RtRp  = normR;
-    normR = sum(R(:).*R(:));   
+    clear alpha AtAP
     
+    % Finds the step size for updating P
+    %----------------------------------------------------------------------    
+    normR = sum(R(:).*R(:));       
     if verbose
         fprintf('%g\n', sqrt(normR));
     end
     
+    RtRp = normR;    
     beta = normR / RtRp;            
-
+    clear RtRp
+    
     % Check if converged
     %----------------------------------------------------------------------
     if j>=niter, 
@@ -476,7 +500,21 @@ end
 %==========================================================================
 
 %==========================================================================
-function [mat,dim] = max_bb_orient(Nii,vx)
+function [mat,dim] = max_bb_orient(img,vx)
+C = numel(img);
+
+% Concatenate all NIfTIs
+Nii = nifti;
+cnt = 1;
+for c=1:C
+    N = numel(img{c});
+    for n=1:N
+       Nii(cnt) = img{c}(n);
+       cnt      = cnt + 1;
+    end
+end
+
+% Calculate bounding-box orientation and dimensions
 mn = [ Inf  Inf  Inf]';
 mx = [-Inf -Inf -Inf]';
 for i=1:numel(Nii),
@@ -497,25 +535,25 @@ dim = dim(1:3);
 %==========================================================================
 
 %==========================================================================
-function dat = init_A(V,dat)
-I  = numel(V);
+function dat = init_proj_mat(img,dat)
+N  = numel(img);
 Mj = dat.mat;
 dj = dat.dm;
     
-dat.I = I;
-for i=1:I
-    dat.A(i).mat = V{i}.mat;
-    dat.A(i).dm  = V{i}.dim;
+dat.N = N;
+for n=1:N
+    dat.A(n).mat = img(n).mat;    
+    dat.A(n).dm  = size(img(n).dat(:,:,:));
     
     if strcmp(dat.proj_mat,'sinc')
-        Mi         = dat.A(i).mat;
+        Mi         = dat.A(n).mat;
         M          = Mj\Mi;
         R          = (M(1:3,1:3)/diag(sqrt(sum(M(1:3,1:3).^2))))';
-        dat.A(i).S = blur_fun(dj,R,[sqrt(sum(M(1:3,1:3).^2))]);
+        dat.A(n).S = blur_fun(dj,R,[sqrt(sum(M(1:3,1:3).^2))]);
     elseif strcmp(dat.proj_mat,'smo')
         vxj        = abs(det(dat.mat(1:3,1:3)))^(1/3);
-        vxi        = sqrt(sum(dat.A(i).mat(1:3,1:3).^2));        
-        dat.A(i).S = sqrt(max(vxi.^2 - vxj.^2,0));
+        vxi        = sqrt(sum(dat.A(n).mat(1:3,1:3).^2));        
+        dat.A(n).S = sqrt(max(vxi.^2 - vxj.^2,0));
     end
 end
 %==========================================================================
@@ -551,11 +589,105 @@ end
 %==========================================================================
 
 %==========================================================================
-function y = make_deformation(T,dm)
+function y = make_deformation(M,dm)
 [x0,y0,z0] = ndgrid(single(1:dm(1)),...
                     single(1:dm(2)),...
                     single(1:dm(3)));
-y          = cat(4,T(1,1)*x0 + T(1,2)*y0 + T(1,3)*z0 + T(1,4), ...
-                   T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4), ...
-                   T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4));
-%==========================================================================                  
+y          = cat(4,M(1,1)*x0 + M(1,2)*y0 + M(1,3)*z0 + M(1,4), ...
+                   M(2,1)*x0 + M(2,2)*y0 + M(2,3)*z0 + M(2,4), ...
+                   M(3,1)*x0 + M(3,2)*y0 + M(3,3)*z0 + M(3,4));
+%==========================================================================   
+
+%==========================================================================
+function prior = laplace_prior(dm,vx)
+L = zeros(dm);
+if dm(1)>=2
+    tmp        = 1/(vx(1)^2);
+    L(  1,1,1) = L(  1,1,1) + tmp*2;
+    L(  2,1,1) = L(  2,1,1) - tmp;
+    L(end,1,1) = L(end,1,1) - tmp;
+end
+if dm(2)>=2
+    tmp        = 1/(vx(2)^2);
+    L(1,  1,1) = L(1,  1,1) + tmp*2;
+    L(1,  2,1) = L(1,  2,1) - tmp;
+    L(1,end,1) = L(1,end,1) - tmp;
+end
+if dm(3)>=2
+    tmp        = 1/(vx(3)^2);
+    L(1,1,  1) = L(1,1,  1) + tmp*2;
+    L(1,1,  2) = L(1,1,  2) - tmp;
+    L(1,1,end) = L(1,1,end) - tmp;
+end
+L     = single(fftn(L));
+prior = @(Y) real(ifftn(fftn(Y).*L));
+%==========================================================================
+
+%==========================================================================
+function Y0 = get_starting_estimate(X,dat,vx1,dm1,mat1)
+C  = numel(X);
+Y0 = cell(1,C);
+for c=1:C
+    Y0{c} = zeros(dm1,'single');
+    for n=1:dat{c}.N
+        vx0 = spm_misc('vxsize',dat{c}.A(n).mat);
+        
+        T = dat{c}.A(n).mat\mat1;
+        
+        
+        [x0,y0,z0] = ndgrid(1:dm1(1),...
+                            1:dm1(2),...
+                            1:dm1(3));
+
+        x1 = T(1,1)*x0 + T(1,2)*y0 + T(1,3)*z0 + T(1,4);
+        y1 = T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4);
+        z1 = T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4);
+        
+        C   = spm_bsplinc(X{c}{n},[1 1 1 0 0 0]);
+        img = spm_bsplins(C,x1,y1,z1,[1 1 1 0 0 0]);
+        img(~isfinite(img)) = 0;
+        
+        scl = prod(vx1./vx0);
+        img = scl*img;
+                
+        Y0{c} = Y0{c} + single(img);  
+    end
+    Y0{c} =  Y0{c}/dat{c}.N;
+end
+%==========================================================================
+
+%==========================================================================
+function Y = clean_fov(Y,dat)
+mat1 = dat.mat;      
+dm1  = dat.dm; 
+msk  = cell(dat.N,3);
+for n=1:dat.N
+    mat0 = dat.A(n).mat;  
+    dm0  = dat.A(n).dm;
+
+    % Get the mapping from Mref to Mmod
+    T = mat0\mat1;
+
+    % Use ndgrid to give an array of voxel indices
+    [x0,y0,z0] = ndgrid(single(1:dm1(1)),...
+                        single(1:dm1(2)),...
+                        single(1:dm1(3)));
+
+    % Transform these indices to the indices that they point to in the reference image
+    D = cat(4,T(1,1)*x0 + T(1,2)*y0 + T(1,3)*z0 + T(1,4), ...
+              T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4), ...
+              T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4));
+
+    % Mask according to whether these are < 1 or > than the dimensions of the reference image.        
+    for i=1:3
+        msk{n,i} = D(:,:,:,i) >= 1 & D(:,:,:,i) <= dm0(i);
+    end
+end  
+
+% Generate cleaned up image
+for n=1:dat.N
+    for i=1:3
+        Y = msk{n,i}.*Y;
+    end
+end
+%==========================================================================
