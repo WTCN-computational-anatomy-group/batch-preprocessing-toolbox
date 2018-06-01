@@ -251,6 +251,52 @@ if preproc.do_coreg
     clear V
 end
 
+% Decimate in-plane
+%--------------------------------------------------------------------------
+if preproc.do_dec_inplane
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    spm_impreproc('decimate_inplane',fname,1);
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ds_');
+
+                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                spm_impreproc('decimate_inplane',fname,1);
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'ds_');
+
+                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+            end
+        end  
+    end
+    
+    if isfield(dat,'label')
+        R = numel(dat.label);
+        for r=1:R
+            fname = dat.label{r}.nii.dat.fname;
+            
+            spm_impreproc('decimate_inplane',fname,1);
+                        
+            [dat.label{r}.nii,nfname] = update_nii(fname,'ds_');
+            
+            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
+        end
+    end    
+end
+
 % Create equally sized images by super-resolution
 %--------------------------------------------------------------------------
 if preproc.do_superres    

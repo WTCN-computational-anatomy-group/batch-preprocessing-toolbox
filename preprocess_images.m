@@ -4,8 +4,8 @@ function preprocess_images
 % Give path to job definition JSON and required toolboxes
 %--------------------------------------------------------------------------
 
-job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/MatchingCases_T1T2DWIFlair.json';
-test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
+job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/ROB.json';
+test_level = 1; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
 
 pth_distributed_toolbox = '/data/mbrud/dev/distributed-computing';
 pth_auxiliary_functions = '/data/mbrud/dev/auxiliary-functions';
@@ -24,7 +24,7 @@ addpath(pth_auxiliary_functions)
 [job,holly] = preproc_default(job,test_level);
 
 % Create data object
-dat = spm_json_manager('init_dat',job.dir_population,true);
+dat = spm_json_manager('init_dat',job.dir_population);
 dat = dat(1:min(job.S,numel(dat)));
 
 % Build directory structure

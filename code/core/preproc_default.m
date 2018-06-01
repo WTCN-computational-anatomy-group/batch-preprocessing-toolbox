@@ -60,6 +60,9 @@ end
 if ~isfield(job.preproc,'do_reslice')
     job.preproc.do_reslice = false;
 end    
+if ~isfield(job.preproc,'do_dec_inplane')
+    job.preproc.do_dec_inplane = false;
+end    
 if ~isfield(job.preproc,'do_realign2mni')
     job.preproc.do_realign2mni = false;
 end

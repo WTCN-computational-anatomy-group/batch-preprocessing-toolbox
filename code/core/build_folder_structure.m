@@ -38,10 +38,13 @@ end
 if job.preproc.do_coreg
     nam = [nam '-reg'];
 end    
+if job.preproc.do_dec_inplane
+    nam = [nam '-ds'];
+end
 if job.preproc.do_reslice 
     nam = [nam '-res'];        
 end                  
-if job.preproc.vx
+if ~isempty(job.preproc.vx)
     nam = [nam '-vx'];        
 end                      
 if job.preproc.do_superres
