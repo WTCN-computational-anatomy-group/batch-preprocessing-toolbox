@@ -164,7 +164,7 @@ if ~isfield(job.preproc.denoise,'verbose')
     job.preproc.denoise.verbose = false;
 end    
 if ~isfield(job.preproc.denoise,'lambda_ct')
-    job.preproc.denoise.lambda_ct = 1;
+    job.preproc.denoise.lambda_ct = 0.5;
 end    
 
 if ~isfield(job.preproc.denoise,'admm')

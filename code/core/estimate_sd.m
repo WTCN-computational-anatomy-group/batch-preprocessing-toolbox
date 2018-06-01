@@ -4,16 +4,9 @@ X   = Nii.dat(:,:,:);
 
 if strcmpi(modality,'CT')    
     msk     = X>=0 & X<=50;
-    X(~msk) = 0;
-    
-%     msk     = spm_misc('msk_modality',X,modality);
-%     X       = X + 1000;
-%     X(~msk) = 0;
-
+    X(~msk) = 0;    
     noise   = evar(X);
     sd      = sqrt(noise);
-%     msk = X>-1000 & X<-990;
-%     sd  = calc_sd(X(msk));
 elseif strcmpi(modality,'MRI')
     sd  = my_spm_noise_estimate(fname);     
 end
