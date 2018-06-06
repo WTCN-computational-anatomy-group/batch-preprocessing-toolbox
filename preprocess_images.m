@@ -4,7 +4,7 @@ function preprocess_images
 % Give path to job definition JSON and required toolboxes
 %--------------------------------------------------------------------------
 
-job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/ROB.json';
+job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/CROMIS.json';
 test_level = 1; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
 
 pth_distributed_toolbox = '/data/mbrud/dev/distributed-computing';

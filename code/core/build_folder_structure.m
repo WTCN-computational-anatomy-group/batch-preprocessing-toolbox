@@ -38,7 +38,7 @@ end
 if job.preproc.do_coreg
     nam = [nam '-reg'];
 end    
-if job.preproc.do_dec_inplane
+if job.preproc.do_ds_inplane
     nam = [nam '-ds'];
 end
 if job.preproc.do_reslice 

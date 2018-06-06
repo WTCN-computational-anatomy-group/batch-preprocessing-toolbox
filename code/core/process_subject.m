@@ -251,9 +251,9 @@ if preproc.do_coreg
     clear V
 end
 
-% Decimate in-plane
+% Down-sample in-plane
 %--------------------------------------------------------------------------
-if preproc.do_dec_inplane
+if preproc.do_ds_inplane
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -262,7 +262,7 @@ if preproc.do_dec_inplane
                 for n=1:N
                     fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
 
-                    spm_impreproc('decimate_inplane',fname,1);
+                    spm_impreproc('downsample_inplane',fname,1);
 
                     [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ds_');
 
@@ -274,7 +274,7 @@ if preproc.do_dec_inplane
             for n=1:N
                 fname = dat.modality{m}.nii(n).dat.fname;
 
-                spm_impreproc('decimate_inplane',fname,1);
+                spm_impreproc('downsample_inplane',fname,1);
 
                 [dat.modality{m}.nii(n),nfname] = update_nii(fname,'ds_');
 
@@ -288,7 +288,7 @@ if preproc.do_dec_inplane
         for r=1:R
             fname = dat.label{r}.nii.dat.fname;
             
-            spm_impreproc('decimate_inplane',fname,1);
+            spm_impreproc('downsample_inplane',fname,1);
                         
             [dat.label{r}.nii,nfname] = update_nii(fname,'ds_');
             

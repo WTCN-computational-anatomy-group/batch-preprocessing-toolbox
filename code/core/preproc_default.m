@@ -60,8 +60,8 @@ end
 if ~isfield(job.preproc,'do_reslice')
     job.preproc.do_reslice = false;
 end    
-if ~isfield(job.preproc,'do_dec_inplane')
-    job.preproc.do_dec_inplane = false;
+if ~isfield(job.preproc,'do_ds_inplane')
+    job.preproc.do_ds_inplane = false;
 end    
 if ~isfield(job.preproc,'do_realign2mni')
     job.preproc.do_realign2mni = false;
@@ -146,7 +146,7 @@ if ~isfield(job.preproc.superres.admm,'alpha')
     job.preproc.superres.admm.alpha = 2;
 end     
 if ~isfield(job.preproc.superres.admm,'cgs_niter')
-    job.preproc.superres.admm.cgs_niter = 10;
+    job.preproc.superres.admm.cgs_niter = 20;
 end  
 if ~isfield(job.preproc.superres.admm,'cgs_tol')
     job.preproc.superres.admm.cgs_tol = 1e-3;
@@ -164,7 +164,7 @@ if ~isfield(job.preproc.denoise,'verbose')
     job.preproc.denoise.verbose = false;
 end    
 if ~isfield(job.preproc.denoise,'lambda_ct')
-    job.preproc.denoise.lambda_ct = 0.5;
+    job.preproc.denoise.lambda_ct = 0.3;
 end    
 
 if ~isfield(job.preproc.denoise,'admm')

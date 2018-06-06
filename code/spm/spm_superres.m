@@ -22,7 +22,7 @@ for c=1:C
     lambda1 = zeros(1,N);
     for n=1:N
         vx0 = spm_misc('vxsize',img{c}(n).mat);
-        scl = max(prod(vx0),1); % Ad-hoc fudge-factor
+        scl = sqrt(max(vx0)); % Ad-hoc fudge-factor
         
         sd{c}(n) = estimate_sd(img{c}(n).dat.fname,modality);
         sd{c}(n) = scl*sd{c}(n);
@@ -31,15 +31,6 @@ for c=1:C
     end
     lambda(c) = mean(lambda1);
 end
-
-% % Down-sample inplane
-% %--------------------------------------------------------------------------
-% for c=1:C
-%     N = numel(img{c});
-%     for n=1:N
-%         img{c}(n) = downsample_inplane(img{c}(n),vx1);
-%     end
-% end
 
 % Get LR images
 %--------------------------------------------------------------------------
@@ -255,9 +246,13 @@ for iter=1:niter
         clear DtU DtW
         
         % Solve least-squares problem
-        Y{c} = cg_image_solver(LHS,RHS,Y{c},cgs_niter,cgs_tol);
+        [Y{c},cg_j,cg_d,cg_tol] = cg_image_solver(LHS,RHS,Y{c},cgs_niter,cgs_tol);
         clear RHS LHS
         
+        if verbose
+            fprintf('%2d | %8.7f %8.7f %8.7f\n',iter,cg_j,cg_d,cg_tol);        
+        end
+            
         if nonneg(c)
             % Non-negativity 'constraint'
             Y{c}(Y{c}<0) = 0;
@@ -437,7 +432,7 @@ Y1 = Y1 + lambda*prior(Y);
 %==========================================================================
 
 %==========================================================================
-function Y = cg_image_solver(LHS,RHS,Y,niter,tol,verbose)
+function [Y,j,d,tol] = cg_image_solver(LHS,RHS,Y,niter,tol,verbose)
 if nargin<3, Y       = zeros(size(RHS),'single'); end
 if nargin<4, niter   = 32; end
 if nargin<5, tol     = 1e-3; end
@@ -497,6 +492,9 @@ while sqrt(normR) > tol*normRHS,
 
     j = j + 1; 
 end
+
+d   = sqrt(normR);
+tol = tol*normRHS;
 %==========================================================================
 
 %==========================================================================
@@ -647,8 +645,8 @@ for c=1:C
         img = spm_bsplins(C,x1,y1,z1,[1 1 1 0 0 0]);
         img(~isfinite(img)) = 0;
         
-        scl = prod(vx1./vx0);
-        img = scl*img;
+%         scl = prod(vx1./vx0);
+%         img = scl*img;
                 
         Y0{c} = Y0{c} + single(img);  
     end
