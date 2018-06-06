@@ -40,6 +40,11 @@ opt = init_opt(job,dir_preproc,dir_2d);
 print_progress('Started');
 [~,~] = distribute(holly,'process_subject','inplace',dat,opt);
 print_progress('Finished');
+
+% Create dat.mat objects (for faster loading of population)
+fname = 'dat.mat';
+spm_json_manager('init_dat',dir_preproc,fullfile(dir_preproc,fname));
+if ~isempty(dir_2d), spm_json_manager('init_dat',dir_2d,fullfile(dir_2d,fname)); end
 %==========================================================================
 
 %==========================================================================
