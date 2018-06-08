@@ -31,6 +31,9 @@ end
 if ~isfield(job,'dir_preproc')
     error('~isfield(pars,''dir_preproc'')')
 end    
+if ~isfield(job,'write_3d')
+    job.write_3d = true;
+end
 if ~isfield(job,'write_2d')
     job.write_2d = false;
 end
@@ -72,9 +75,6 @@ end
 if ~isfield(job.preproc,'do_rem_neck')
     job.preproc.do_rem_neck = false;
 end
-if ~isfield(job.preproc,'do_skull_strip')
-    job.preproc.do_skull_strip = false;
-end
 if ~isfield(job.preproc,'do_superres')
     job.preproc.do_superres = false;
 end    
@@ -84,30 +84,18 @@ end
 if ~isfield(job.preproc,'vx')
     job.preproc.vx = [];
 end
-if ~isfield(job.preproc,'normalise_intensities')
-    job.preproc.normalise_intensities = false;
+if ~isfield(job.preproc,'do_normalise_intensities')
+    job.preproc.do_normalise_intensities = false;
 end 
 if ~isfield(job.preproc,'do_bf_correct')
     job.preproc.do_bf_correct = false;        
 end    
-
-% Segmentation parameters
-%----------------------------------------------------------------------
-if ~isfield(job,'segment')
-    job.segment = struct;
+if ~isfield(job.preproc,'do_skull_strip')
+    job.preproc.do_skull_strip = false;
 end
-if ~isfield(job.segment,'write_tc')
-    job.segment.write_tc = false;        
-end    
-if ~isfield(job.segment,'write_bf')
-    job.segment.write_bf = false;
-end    
-if ~isfield(job.segment,'write_df')
-    job.segment.write_df = false;
-end    
-if ~isfield(job.segment,'make_ml_labels')
-    job.segment.make_ml_labels = false;
-end 
+if ~isfield(job.preproc,'do_segment')
+    job.preproc.do_segment = false;
+end
 
 % Super-resolution parameters
 %----------------------------------------------------------------------

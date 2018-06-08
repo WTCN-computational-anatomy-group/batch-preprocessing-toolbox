@@ -4,8 +4,8 @@ function preprocess_images
 % Give path to job definition JSON and required toolboxes
 %--------------------------------------------------------------------------
 
-job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/CROMIS.json';
-test_level = 1; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
+job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/IXI_Yael.json';
+test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
 
 pth_distributed_toolbox = '/data/mbrud/dev/distributed-computing';
 pth_auxiliary_functions = '/data/mbrud/dev/auxiliary-functions';
@@ -43,8 +43,16 @@ print_progress('Finished');
 
 % Create dat.mat objects (for faster loading of population)
 fname = 'dat.mat';
-spm_json_manager('init_dat',dir_preproc,fullfile(dir_preproc,fname));
-if ~isempty(dir_2d), spm_json_manager('init_dat',dir_2d,fullfile(dir_2d,fname)); end
+if job.write_3d
+    spm_json_manager('init_dat',dir_preproc,fullfile(dir_preproc,fname));
+else
+    if exist(dir_preproc,'dir')
+        rmdir(dir_preproc,'s');  
+    end
+end
+if ~isempty(dir_2d), 
+    spm_json_manager('init_dat',dir_2d,fullfile(dir_2d,fname)); 
+end
 %==========================================================================
 
 %==========================================================================

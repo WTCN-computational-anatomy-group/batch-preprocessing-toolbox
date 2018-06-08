@@ -59,10 +59,10 @@ end
 if job.preproc.do_skull_strip
     nam = [nam '-ss'];
 end  
-if job.preproc.normalise_intensities
+if job.preproc.do_normalise_intensities
     nam = [nam '-ni'];
 end   
-if job.segment.write_tc
+if job.preproc.do_segment
     nam = [nam '-seg'];
 end
 %==========================================================================   
