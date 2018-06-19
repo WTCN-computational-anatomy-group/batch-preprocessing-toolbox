@@ -202,7 +202,7 @@ if preproc.do_crop
         for r=1:R
             fname = dat.label{r}.nii.dat.fname;
             
-            spm_impreproc('subvol',spm_vol(fname),bb,'cr_'); 
+            [~,bb] = spm_impreproc('atlas_crop',fname,'cr_',preproc.do_rem_neck);             
                         
             [dat.label{r}.nii,nfname] = update_nii(fname,'cr_');
             
