@@ -727,7 +727,7 @@ if write_2d
                 for n=1:N
                     fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
 
-                    nfname = create_2d_slice(fname,axis_2d);
+                    nfname = spm_imbasics('create_2d_slice',fname,axis_2d);
 
                     dat.modality{m}.channel{c}.nii(n) = nifti(nfname);
 
@@ -739,7 +739,7 @@ if write_2d
             for n=1:N
                 fname = dat.modality{m}.nii(n).dat.fname;
 
-                nfname = create_2d_slice(fname,axis_2d);
+                nfname = spm_imbasics('create_2d_slice',fname,axis_2d);
 
                 dat.modality{m}.nii(n) = nifti(nfname);
 
@@ -753,7 +753,7 @@ if write_2d
         for r=1:R
             fname  = dat.label{r}.nii.dat.fname;
             
-            nfname = create_2d_slice(fname,axis_2d);
+            nfname = spm_imbasics('create_2d_slice',fname,axis_2d);
 
             dat.label{r}.nii = nifti(nfname);
 
@@ -768,7 +768,7 @@ if write_2d
             for k=1:K
                 fname = dat.segmentation{t}.class{k}.nii.dat.fname;
                 
-                nfname = create_2d_slice(fname,axis_2d);
+                nfname = spm_imbasics('create_2d_slice',fname,axis_2d);
                 
                 dat.segmentation{t}.class{k}.nii = nifti(nfname);
 
