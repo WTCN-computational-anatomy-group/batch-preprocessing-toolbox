@@ -273,7 +273,7 @@ if preproc.do_ds_inplane
             for n=1:N
                 fname = dat.modality{m}.nii(n).dat.fname;
 
-                spm_impreproc('downsample_inplane',fname,1);
+                spm_impreproc('downsample_inplane',fname);
 
                 [dat.modality{m}.nii(n),nfname] = update_nii(fname,'ds_');
 
@@ -287,7 +287,7 @@ if preproc.do_ds_inplane
         for r=1:R
             fname = dat.label{r}.nii.dat.fname;
             
-            spm_impreproc('downsample_inplane',fname,1);
+            spm_impreproc('downsample_inplane',fname);
                         
             [dat.label{r}.nii,nfname] = update_nii(fname,'ds_');
             
@@ -353,7 +353,21 @@ if preproc.do_superres
                 dat.modality{m}.json(n) = [];
             end
         end        
-    end            
+    end        
+        
+    if isfield(dat,'label')
+        % Change voxel size of labels
+        R = numel(dat.label);
+        for r=1:R
+            fname = dat.label{r}.nii.dat.fname;
+            
+            spm_impreproc('nm_reorient',fname,superres.vx,0,'vx_');  
+                        
+            [dat.label{r}.nii,nfname] = update_nii(fname,'vx_');
+            
+            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
+        end
+    end    
 end                  
 
 % Change voxel size of image(s)
