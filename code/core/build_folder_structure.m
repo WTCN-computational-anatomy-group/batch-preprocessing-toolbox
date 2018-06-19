@@ -40,15 +40,16 @@ if job.preproc.do_coreg
 end    
 if job.preproc.do_ds_inplane
     nam = [nam '-ds'];
-end
-if job.preproc.do_reslice 
-    nam = [nam '-res'];        
-end                  
-if ~isempty(job.preproc.vx)
-    nam = [nam '-vx'];        
-end                      
+end                
 if job.preproc.do_superres
     nam = [nam '-sr'];
+elseif ~job.preproc.do_superres
+    if job.preproc.do_reslice 
+        nam = [nam '-res'];        
+    end                  
+    if ~isempty(job.preproc.vx)
+        nam = [nam '-vx'];        
+    end     
 end            
 if job.preproc.do_denoise
     nam = [nam '-den'];
