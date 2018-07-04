@@ -202,7 +202,7 @@ if preproc.do_crop
         for r=1:R
             fname = dat.label{r}.nii.dat.fname;
             
-            [~,bb] = spm_impreproc('atlas_crop',fname,'cr_',preproc.do_rem_neck);             
+            spm_impreproc('subvol',spm_vol(fname),bb,'cr_');                         
                         
             [dat.label{r}.nii,nfname] = update_nii(fname,'cr_');
             
@@ -248,52 +248,6 @@ if preproc.do_coreg
     %...
     
     clear V
-end
-
-% NN down-sampling in-plane
-%--------------------------------------------------------------------------
-if preproc.do_ds_inplane
-    for m=1:M
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
-
-                    spm_impreproc('downsample_inplane',fname,1);
-
-                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ds_');
-
-                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                fname = dat.modality{m}.nii(n).dat.fname;
-
-                spm_impreproc('downsample_inplane',fname);
-
-                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'ds_');
-
-                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-            end
-        end  
-    end
-    
-    if isfield(dat,'label')
-        R = numel(dat.label);
-        for r=1:R
-            fname = dat.label{r}.nii.dat.fname;
-            
-            spm_impreproc('downsample_inplane',fname);
-                        
-            [dat.label{r}.nii,nfname] = update_nii(fname,'ds_');
-            
-            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
-        end
-    end    
 end
 
 % Create equally sized images by super-resolution
@@ -369,52 +323,6 @@ if preproc.do_superres
         end
     end    
 end                  
-
-% Change voxel size of image(s)
-%--------------------------------------------------------------------------
-if ~isempty(preproc.vx) && ~preproc.do_superres
-    for m=1:M
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
-
-                    spm_impreproc('nm_reorient',fname,preproc.vx,1,'vx_');  
-
-                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'vx_');
-
-                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                fname = dat.modality{m}.nii(n).dat.fname;
-
-                spm_impreproc('nm_reorient',fname,preproc.vx,1,'vx_');  
-
-                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'vx_');
-
-                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-            end
-        end       
-    end
-    
-    if isfield(dat,'label')
-        R = numel(dat.label);
-        for r=1:R
-            fname = dat.label{r}.nii.dat.fname;
-            
-            spm_impreproc('nm_reorient',fname,preproc.vx,0,'vx_');  
-                        
-            [dat.label{r}.nii,nfname] = update_nii(fname,'vx_');
-            
-            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
-        end
-    end    
-end
 
 % Reslice to size of image with largest FOV
 %--------------------------------------------------------------------------
@@ -556,8 +464,146 @@ if preproc.do_normalise_intensities
         end  
     end
     clear img
-end                  
+end   
 
+% NN down-sampling in-plane
+%--------------------------------------------------------------------------
+if preproc.do_ds_inplane
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    spm_impreproc('downsample_inplane',fname);
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ds_');
+
+                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                spm_impreproc('downsample_inplane',fname);
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'ds_');
+
+                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+            end
+        end  
+    end
+    
+    if isfield(dat,'label')
+        R = numel(dat.label);
+        for r=1:R
+            fname = dat.label{r}.nii.dat.fname;
+            
+            spm_impreproc('downsample_inplane',fname);
+                        
+            [dat.label{r}.nii,nfname] = update_nii(fname,'ds_');
+            
+            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
+        end
+    end    
+end
+
+% NN down-sampling through-plane
+%--------------------------------------------------------------------------
+if preproc.do_ds_throughplane
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    spm_impreproc('downsample_throughplane',fname);
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'dsz_');
+
+                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                spm_impreproc('downsample_throughplane',fname);
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'dsz_');
+
+                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+            end
+        end  
+    end
+    
+    if isfield(dat,'label')
+        R = numel(dat.label);
+        for r=1:R
+            fname = dat.label{r}.nii.dat.fname;
+            
+            spm_impreproc('downsample_throughplane',fname);
+                        
+            [dat.label{r}.nii,nfname] = update_nii(fname,'dsz_');
+            
+            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
+        end
+    end    
+end
+
+% Change voxel size of image(s)
+%--------------------------------------------------------------------------
+if ~isempty(preproc.vx) && ~preproc.do_superres
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    spm_impreproc('nm_reorient',fname,preproc.vx,1,'vx_');  
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'vx_');
+
+                    spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                spm_impreproc('nm_reorient',fname,preproc.vx,1,'vx_');  
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'vx_');
+
+                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+            end
+        end       
+    end
+    
+    if isfield(dat,'label')
+        R = numel(dat.label);
+        for r=1:R
+            fname = dat.label{r}.nii.dat.fname;
+            
+            spm_impreproc('nm_reorient',fname,preproc.vx,0,'vx_');  
+                        
+            [dat.label{r}.nii,nfname] = update_nii(fname,'vx_');
+            
+            spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
+        end
+    end    
+end
+              
 % Segment using spm_preproc8
 %--------------------------------------------------------------------------
 if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct              

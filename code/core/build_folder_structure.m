@@ -38,9 +38,6 @@ end
 if job.preproc.do_coreg
     nam = [nam '-reg'];
 end    
-if job.preproc.do_ds_inplane
-    nam = [nam '-ds'];
-end                
 if job.preproc.do_superres
     nam = [nam '-sr'];
 elseif ~job.preproc.do_superres
@@ -50,7 +47,13 @@ elseif ~job.preproc.do_superres
     if ~isempty(job.preproc.vx)
         nam = [nam '-vx'];        
     end     
-end            
+end         
+if job.preproc.do_ds_inplane
+    nam = [nam '-ds'];
+end   
+if job.preproc.do_ds_throughplane
+    nam = [nam '-dsz'];
+end        
 if job.preproc.do_denoise
     nam = [nam '-den'];
 end    

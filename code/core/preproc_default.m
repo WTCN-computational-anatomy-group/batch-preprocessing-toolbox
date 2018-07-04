@@ -66,6 +66,9 @@ end
 if ~isfield(job.preproc,'do_ds_inplane')
     job.preproc.do_ds_inplane = false;
 end    
+if ~isfield(job.preproc,'do_ds_throughplane')
+    job.preproc.do_ds_throughplane = false;
+end    
 if ~isfield(job.preproc,'do_realign2mni')
     job.preproc.do_realign2mni = false;
 end
