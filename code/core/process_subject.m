@@ -13,6 +13,8 @@ M           = numel(dat.modality);
 
 % Make copies into dir_preproc (in order to not modify the original data)
 %--------------------------------------------------------------------------
+fprintf('Copying images... ')
+
 for m=1:M
     if isfield(dat.modality{m},'channel')
         C = numel(dat.modality{m}.channel);
@@ -57,8 +59,11 @@ for m=1:M
         end
     end
 end
+fprintf('done!\n')
 
 if isfield(dat,'label')
+    fprintf('Copying labels... ')
+    
     % Also copy labels, if exists
     %----------------------------------------------------------------------
     R = numel(dat.label);
@@ -79,11 +84,15 @@ if isfield(dat,'label')
 
         spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);
     end
+    
+    fprintf('done!\n')
 end
 
 % Rigidly realign to MNI space
 %--------------------------------------------------------------------------
 if preproc.do_realign2mni   
+    fprintf('Realigning to MNI... ')
+    
     origin_reset = false;
     for m=1:M
         if ~isfield(dat.modality{m},'channel')
@@ -163,11 +172,15 @@ if preproc.do_realign2mni
             dat.label{r}.nii = nifti(fname); 
         end
     end
+    
+    fprintf('done!\n')
 end               
 
 % Remove image data outside of the head (air..)
 %--------------------------------------------------------------------------
 if preproc.do_crop    
+    fprintf('Removing air voxels... ')
+    
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -209,11 +222,15 @@ if preproc.do_crop
             spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
         end
     end
+    
+    fprintf('done!\n')
 end  
 
 % Co-register images
 %--------------------------------------------------------------------------
 if preproc.do_coreg
+    fprintf('Co-registering... ')
+    
     % First perform within-channel co-registration    
     for m=1:M
         if isfield(dat.modality{m},'channel')            
@@ -248,11 +265,15 @@ if preproc.do_coreg
     %...
     
     clear V
+    
+    fprintf('done!\n')
 end
 
 % Create equally sized images by super-resolution
 %--------------------------------------------------------------------------
 if preproc.do_superres    
+    fprintf('Super-resolving... ')
+    
     for m=1:M    
         modality = dat.modality{m}.name;
         if ~strcmpi(modality,'MRI'), continue; end
@@ -322,11 +343,15 @@ if preproc.do_superres
             spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
         end
     end    
+    
+    fprintf('done!\n')
 end                  
 
 % Reslice to size of image with largest FOV
 %--------------------------------------------------------------------------
-if preproc.do_reslice && ~preproc.do_superres       
+if preproc.do_reslice && ~preproc.do_superres  
+    fprintf('Reslicing... ')
+    
     V   = spm_vol;
     cnt = 0;
     for m=1:M
@@ -379,11 +404,15 @@ if preproc.do_reslice && ~preproc.do_superres
     end
     
     clear V
+        
+    fprintf('done!\n')
 end
 
 % Denoise images
 %--------------------------------------------------------------------------
 if preproc.do_denoise
+    fprintf('Denoising... ')
+    
     for m=1:M    
         nii      = nifti;
         modality = dat.modality{m}.name;
@@ -436,11 +465,15 @@ if preproc.do_denoise
     end    
     
     clear nii
+    
+    fprintf('done!\n')
 end
 
 % Simple normalisation of image intensities (make mean(img)=100)
 %--------------------------------------------------------------------------
 if preproc.do_normalise_intensities    
+    fprintf('Intensity normalising... ')
+    
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -464,11 +497,15 @@ if preproc.do_normalise_intensities
         end  
     end
     clear img
+    
+    fprintf('done!\n')
 end   
 
 % NN down-sampling in-plane
 %--------------------------------------------------------------------------
 if preproc.do_ds_inplane
+    fprintf('Down-sampling in-plane... ')
+    
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -510,11 +547,15 @@ if preproc.do_ds_inplane
             spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
         end
     end    
+    
+    fprintf('done!\n')
 end
 
 % NN down-sampling through-plane
 %--------------------------------------------------------------------------
 if preproc.do_ds_throughplane
+    fprintf('Down-sampling through-plane... ')
+    
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -556,11 +597,15 @@ if preproc.do_ds_throughplane
             spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
         end
     end    
+    
+    fprintf('done!\n')
 end
 
 % Change voxel size of image(s)
 %--------------------------------------------------------------------------
 if ~isempty(preproc.vx) && ~preproc.do_superres
+    fprintf('Changing voxel sizes... ')
+    
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
@@ -602,11 +647,14 @@ if ~isempty(preproc.vx) && ~preproc.do_superres
             spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);                                            
         end
     end    
+    
+    fprintf('done!\n')
 end
               
 % Segment using spm_preproc8
 %--------------------------------------------------------------------------
 if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct              
+    fprintf('Segmenting... ')
 
     % For segmenting we assume... 
     m = 1; % ...one modality...
@@ -635,11 +683,15 @@ if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct
      
     % Get output files
     dat = add_segmentations2dat(dat);
+    
+    fprintf('done!\n')
 end         
 
 % Overwrite image data with bias-corrected version from spm_preproc8
 %--------------------------------------------------------------------------
 if preproc.do_bf_correct
+    fprintf('Bias-field correcting... ')
+    
     if isfield(dat.modality{m},'channel')            
         C = numel(dat.modality{m}.channel);
         for c=1:C            
@@ -655,19 +707,27 @@ if preproc.do_bf_correct
         [dat.modality{m}.nii(n),nfname] = update_nii(fname,'m');
 
         spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-    end              
+    end        
+    
+    fprintf('done!\n')
 end
 
 % Skull-strip image data using mask built from GM, WM and CSF classes from
 % spm_preproc8 segmentation
 %--------------------------------------------------------------------------
-if preproc.do_skull_strip    
+if preproc.do_skull_strip  
+    fprintf('Skull-stripping... ')            
+    
     dat = skull_strip(dat);                 
+    
+    fprintf('done!\n')
 end  
 
 % Clean-up
 %--------------------------------------------------------------------------
 if ~preproc.do_segment && (preproc.do_skull_strip || preproc.do_bf_correct)
+    fprintf('Cleaning-up... ')
+    
     for t=1:numel(dat.segmentation)
         for k=1:numel(dat.segmentation{t}.class)
             delete(dat.segmentation{t}.class{k}.nii.dat.fname);
@@ -677,11 +737,15 @@ if ~preproc.do_segment && (preproc.do_skull_strip || preproc.do_bf_correct)
     
     dat = rmfield(dat,'segmentation');
     dat = rmfield(dat,'segmentation_map');
+    
+    fprintf('done!\n')
 end
 
 % Create 2D versions
 %--------------------------------------------------------------------------
 if write_2d
+    fprintf('Writing 2D data... ')
+    
     % Make copies
     for m=1:M
         if isfield(dat.modality{m},'channel')
@@ -836,6 +900,8 @@ if write_2d
            end
         end
     end    
+    
+    fprintf('done!\n')
 end      
 %==========================================================================
 
