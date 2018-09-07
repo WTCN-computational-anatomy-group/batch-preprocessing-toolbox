@@ -6,12 +6,6 @@ if isstring(job) || ischar(job)
     job = spm_jsonread(job);
 end
 
-% Data-set specific parameters (m=1,...,M)
-%--------------------------------------------------------------------------
-if ~isfield(job,'dir_population'), 
-    error('pars.dir_population needs to be defined!'); 
-end
-
 % General parameters
 %----------------------------------------------------------------------    
 if ~isfield(job,'S')
@@ -57,6 +51,9 @@ end
 if ~isfield(job.preproc,'tol_vx')
     job.preproc.tol_vx = 5;
 end
+if ~isfield(job.preproc,'reset_origin')
+    job.preproc.reset_origin = false;
+end
 if ~isfield(job.preproc,'do_coreg')
     job.preproc.do_coreg = false;
 end
@@ -76,7 +73,7 @@ if ~isfield(job.preproc,'do_crop')
     job.preproc.do_crop = false;
 end
 if ~isfield(job.preproc,'do_rem_neck')
-    job.preproc.do_rem_neck = false;
+    job.preproc.do_rem_neck = 0;
 end
 if ~isfield(job.preproc,'do_superres')
     job.preproc.do_superres = false;
@@ -86,6 +83,9 @@ if ~isfield(job.preproc,'do_denoise')
 end    
 if ~isfield(job.preproc,'vx')
     job.preproc.vx = [];
+end
+if ~isfield(job.preproc,'deg')
+    job.preproc.deg = 0;
 end
 if ~isfield(job.preproc,'do_normalise_intensities')
     job.preproc.do_normalise_intensities = false;
@@ -98,6 +98,9 @@ if ~isfield(job.preproc,'do_skull_strip')
 end
 if ~isfield(job.preproc,'do_segment')
     job.preproc.do_segment = false;
+end
+if ~isfield(job.preproc,'part_labels')
+    job.preproc.part_labels = {};
 end
 
 % Super-resolution parameters
@@ -114,6 +117,9 @@ end
 if ~isfield(job.preproc.superres,'proj_mat')
     job.preproc.superres.proj_mat = 'sinc';
 end    
+if ~isfield(job.preproc.superres,'no_lambda')
+    job.preproc.superres.no_lambda = {'IR'};
+end     
 
 if ~isfield(job.preproc.superres,'admm')
     job.preproc.superres.admm = struct;
