@@ -1,4 +1,4 @@
-function segment_subject(V,write_tc,write_bf,write_df,dir_out,modality)
+function segment_preproc8(V,write_tc,write_bf,write_df,dir_out,modality)
 N = numel(V);
 
 obj          = struct;
