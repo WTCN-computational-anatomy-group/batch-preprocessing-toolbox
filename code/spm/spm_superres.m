@@ -1,4 +1,4 @@
-function nii_out = spm_superres(img,modality,opt)
+function nii_out = spm_superres(img,modality,channel,opt)
 
 % Sanity-check for super-resolution
 %--------------------------------------------------------------------------
@@ -11,6 +11,7 @@ end
 C         = numel(img);
 vx1       = opt.vx;
 proj_mat  = opt.proj_mat;
+no_lambda = opt.no_lambda;
 
 % Estimate model parameters (sd,lambda)
 %--------------------------------------------------------------------------
@@ -22,7 +23,11 @@ for c=1:C
     lambda1 = zeros(1,N);
     for n=1:N
         vx0 = spm_misc('vxsize',img{c}(n).mat);
-        scl = sqrt(max(vx0)); % Ad-hoc fudge-factor
+        if 0%any(round(vx0,3)>1)
+            scl = log(max(vx0)); % Ad-hoc fudge-factor
+        else
+            scl = 1;
+        end
         
         sd{c}(n) = estimate_sd(img{c}(n).dat.fname,modality);
         sd{c}(n) = scl*sd{c}(n);
@@ -30,6 +35,22 @@ for c=1:C
         lambda1(n) = estimate_lambda(img{c}(n).dat.fname,modality);
     end
     lambda(c) = mean(lambda1);
+end
+
+% For some MR contrasts it is difficult to estimate lambda (e.g. IR), here a simple
+% fix is to replace those estimates with the average of the other estimates
+nlambda = zeros(size(lambda));
+for c=1:C
+    if any(strcmp(no_lambda,channel{c}))
+        ix         = ~(1:C==c);
+        nlambda(c) = mean(lambda(ix));
+    end
+end
+
+for c=1:C
+    if any(strcmp(no_lambda,channel{c}))        
+        lambda(c) = nlambda(c);
+    end
 end
 
 % Get LR images
@@ -279,7 +300,7 @@ for iter=1:niter
     if verbose
         fprintf('%2d | %8.7f %8.7f %8.7f %8.7f %8.7f\n',iter,ll1,d1,d2,1e-4*nm,rho);
         
-        show_img(X,Y,lambda,sd,'MRI','Super-resolution');
+        show_img(X,Y,lambda,sd,'MRI','(SPM) Super-resolution');
     end    
     
 %     if iter>=20 && d1<tol
@@ -339,7 +360,7 @@ ll1 = 0;
 llr = 0;
 for c=1:C
     N  = numel(X{c});
-    AY = A(Y{c},X{c},dat{c});
+    AY = A(Y{c},dat{c});
     for n=1:N
         I     = numel(X{c}{n});
         sd    = sqrt(1/tau{c}(n));
@@ -356,11 +377,13 @@ ll = -ll1 - sum(sum(sum(sqrt(llr))));
 %==========================================================================
 
 %==========================================================================
-function X = A(Y,X,dat)
+function X = A(Y,dat)
 if strcmp(dat.proj_mat,'sinc') 
     Y(~isfinite(Y)) = 0;
     Y               = fftn(Y);    
 end
+
+X = cell(1,dat.N);
 for n=1:dat.N
     T = dat.mat\dat.A(n).mat;
     y = make_deformation(T,dat.A(n).dm);
@@ -373,6 +396,11 @@ for n=1:dat.N
     end
     
     X{n} = samp0(tmp,y); 
+    
+    vx1  = spm_misc('vxsize',dat.mat);
+    vx0  = spm_misc('vxsize',dat.A(n).mat);
+    scl  = prod(vx1./vx0);
+    X{n} = scl*X{n};
 end
 %==========================================================================  
 
@@ -391,8 +419,8 @@ for n=1:dat.N
     elseif strcmp(dat.proj_mat,'smo')
         spm_smooth(tmp,tmp,dat.A(n).S); 
     end 
-    
-    Y = Y + tau(n).*tmp;    
+     
+    Y = Y + tau(n).*tmp;           
 end
 %==========================================================================
 
@@ -415,7 +443,12 @@ for n=1:dat.N
         spm_smooth(Y,tmp,dat.A(n).S); 
     end
     
-    tmp                 = samp0(tmp,y); 
+    tmp = samp0(tmp,y); 
+    vx1 = spm_misc('vxsize',dat.mat);
+    vx0 = spm_misc('vxsize',dat.A(n).mat);
+    scl = prod(vx1./vx0);
+    tmp = scl*tmp;
+    
     tmp                 = spm_diffeo('push',tmp,y,dat.dm);          
     tmp(~isfinite(tmp)) = 0;
         
@@ -641,13 +674,13 @@ for c=1:C
         y1 = T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4);
         z1 = T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4);
         
-        C   = spm_bsplinc(X{c}{n},[1 1 1 0 0 0]);
-        img = spm_bsplins(C,x1,y1,z1,[1 1 1 0 0 0]);
-        img(~isfinite(img)) = 0;
-        
+        C   = spm_bsplinc(X{c}{n},[4 4 4 0 0 0]);
+        img = spm_bsplins(C,x1,y1,z1,[4 4 4 0 0 0]);
+        img(~isfinite(img) | img<0) = 0;
+                
 %         scl = prod(vx1./vx0);
 %         img = scl*img;
-                
+    
         Y0{c} = Y0{c} + single(img);  
     end
     Y0{c} =  Y0{c}/dat{c}.N;

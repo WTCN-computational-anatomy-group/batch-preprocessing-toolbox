@@ -1,4 +1,4 @@
-function [mg,nu,sig,p] = my_spm_rice_mixture(h,x,K)
+function [mg,nu,sig,p,fail] = my_spm_rice_mixture(h,x,K)
 % Fit a mixture of Ricians to a histogram
 % FORMAT [mg,nu,sig] = rice_mixture(h,x,K)
 % h   - histogram counts
@@ -23,10 +23,11 @@ mg  = ones(K,1)/K;
 nu  = (0:(K-1))'*max(x)/(K+1);
 sig = ones(K,1)*max(x)/K;
 
-m0 = zeros(K,1);
-m1 = zeros(K,1);
-m2 = zeros(K,1);
-ll = -Inf;
+fail = false;
+m0   = zeros(K,1);
+m1   = zeros(K,1);
+m2   = zeros(K,1);
+ll   = -Inf;
 for iter=1:10000,
     p  = zeros(numel(x),K);
     for k=1:K,
@@ -40,6 +41,11 @@ for iter=1:10000,
     sp  = sum(p,2)+eps;
     oll = ll;
     ll  = sum(log(sp).*h(:)); % Log-likelihood
+    
+    if ~isfinite(ll)
+        fail = true;
+        break
+    end
     if ll-oll<1e-8*sum(h), break; end
 
 %     fprintf('%g\n',ll);

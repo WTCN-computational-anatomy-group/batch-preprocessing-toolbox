@@ -1,4 +1,4 @@
-function [noise,val_head] = my_spm_noise_estimate(Scans)
+function noise = my_spm_noise_estimate(Scans)
 % Estimate avarage noise from a series of images
 % FORMAT noise = spm_noise_estimate(Scans)
 % Scans - nifti structures or filenames of images
@@ -7,11 +7,10 @@ function [noise,val_head] = my_spm_noise_estimate(Scans)
 %  Copyright (C) 2012 Wellcome Trust Centre for Neuroimaging
 
 % $Id: spm_noise_estimate.m 4776 2012-07-02 20:33:35Z john $
-
 if ~isa(Scans,'nifti'), Scans = nifti(Scans); end
 
 noise    = zeros(numel(Scans),1);
-val_head = zeros(numel(Scans),1);
+% val_head = zeros(numel(Scans),1);
 for i=1:numel(Scans),
     Nii = Scans(i);
     f   = Nii.dat(:,:,:);
@@ -24,22 +23,29 @@ for i=1:numel(Scans),
         f(f==max(f(:))) = 0;
         [h,x]  = hist(f(f~=0 & isfinite(f)),x);
     end
-    [mg,nu,sd,p] = my_spm_rice_mixture(h(:),x(:),2);
+    
+    [mg,nu,sd,p,fail] = my_spm_rice_mixture(h(:),x(:),2);
+    
+    if fail
+        [~,~,~,n,W] = spm_imbasics('fit_vbgmm2hist',h(:),x(:),2,true,1e-8,false);        
+        sd          = sqrt(1./(n.*W));
+    end
+    
     noise(i)     = min(sd);
     
-    % Background values p(x | z=bg)
-    [~,ix] = min(sd);
-    p1     = p(:,ix);
-
-    % Head values p(x | z=head)
-    [~,ix] = max(sd);
-    p2     = p(:,ix);
-
-    % Calculates intensity value for when p(head)=0.5 using
-    % p(head) = p(x | z=head) / ( p(x | z=head) + p(x | z=bg) )
-    pt = p2./(p2 + p1);
-
-    [~,ix]      = min(abs(pt - 0.5)); % Find closest value to 0.5
-    val_head(i) = x(ix);
+%     % Background values p(x | z=bg)
+%     [~,ix] = min(sd);
+%     p1     = p(:,ix);
+% 
+%     % Head values p(x | z=head)
+%     [~,ix] = max(sd);
+%     p2     = p(:,ix);
+% 
+%     % Calculates intensity value for when p(head)=0.5 using
+%     % p(head) = p(x | z=head) / ( p(x | z=head) + p(x | z=bg) )
+%     pt = p2./(p2 + p1);
+% 
+%     [~,ix]      = min(abs(pt - 0.5)); % Find closest value to 0.5
+%     val_head(i) = x(ix);
 end
 
