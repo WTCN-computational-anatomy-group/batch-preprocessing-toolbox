@@ -43,20 +43,20 @@ if job.preproc.do_superres
 elseif ~job.preproc.do_superres
     if job.preproc.do_reslice 
         nam = [nam '-res'];        
-    end                  
-    if ~isempty(job.preproc.vx)
-        nam = [nam '-vx'];        
-    end     
+    end                           
 end         
+if ~isempty(job.preproc.vx)
+    nam = [nam '-vx' num2str(job.preproc.vx(1))];        
+end
+if job.preproc.do_denoise
+    nam = [nam '-den'];
+end    
 if job.preproc.do_ds_inplane
     nam = [nam '-ds'];
 end   
 if job.preproc.do_ds_throughplane
     nam = [nam '-dsz'];
 end        
-if job.preproc.do_denoise
-    nam = [nam '-den'];
-end    
 if job.preproc.do_bf_correct
     nam = [nam '-bf'];
 end          

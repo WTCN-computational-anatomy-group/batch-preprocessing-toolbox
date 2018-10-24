@@ -4,54 +4,141 @@ function preprocess_images
 % Give path to job definition JSON and required toolboxes
 %--------------------------------------------------------------------------
 
-job        = '/data/mbrud/jobs/batch-preprocessing-toolbox/IXI_Yael.json';
-test_level = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
+dir_distributed_toolbox = '../distributed-computing';
+dir_auxiliary_toolbox   = '../auxiliary-functions';
+dir_mtv_preproc         = '../../MTV-preproc';
+dir_core_functions      = './code';
 
-pth_distributed_toolbox = '/data/mbrud/dev/distributed-computing';
-pth_auxiliary_functions = '/data/mbrud/dev/auxiliary-functions';
-
+%--------------------------------------------------------------------------
 % addpath
 %--------------------------------------------------------------------------
-addpath(genpath('./code'))
-addpath(pth_distributed_toolbox)
-addpath(pth_auxiliary_functions)
- 
-%--------------------------------------------------------------------------
-% Init algorithm 
-%--------------------------------------------------------------------------
 
-% Get job parameters
-[job,holly] = preproc_default(job,test_level);
-
-% Create data object
-dat = spm_json_manager('init_dat',job.dir_population);
-dat = dat(1:min(job.S,numel(dat)));
-
-% Build directory structure
-[dir_preproc,dir_2d] = build_folder_structure(job);
-
-% Create options struct
-opt = init_opt(job,dir_preproc,dir_2d);
+addpath(genpath(dir_core_functions))
+addpath(dir_distributed_toolbox)
+addpath(dir_auxiliary_toolbox)
+addpath(dir_mtv_preproc)
 
 %--------------------------------------------------------------------------
-% Start processing images
+% pars
 %--------------------------------------------------------------------------
 
-print_progress('Started');
-[~,~] = distribute(holly,'process_subject','inplace',dat,opt);
-print_progress('Finished');
+TEST_LEVEL = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
 
-% Create dat.mat objects (for faster loading of population)
-fname = 'dat.mat';
-if job.write_3d
-    spm_json_manager('init_dat',dir_preproc,fullfile(dir_preproc,fname));
-else
-    if exist(dir_preproc,'dir')
-        rmdir(dir_preproc,'s');  
-    end
+VX  = 2;
+RAM = '5G';
+S   = Inf;
+
+%--------------------------------------------------------------------------
+% Define list of jobs
+%--------------------------------------------------------------------------
+
+jobs          = {};
+% jobs{end + 1} = './jobs/special/MRBrainS18-3class.json';
+% jobs{end + 1} = './jobs/special/OASIS-MICCAI-3class.json';
+
+% jobs{end + 1} = './jobs/special/MRBrainS18-challenge.json';
+% jobs{end + 1} = './jobs/special/MRBrainS18-superres.json';
+% jobs{end + 1} = './jobs/special/CROMIS-denoise.json';
+% jobs{end + 1} = './jobs/special/OASIS-LONG-yael.json';
+
+% jobs{end + 1} = './jobs/ATLAS.json';
+jobs{end + 1} = './jobs/CROMIS.json';
+jobs{end + 1} = './jobs/CROMIS-LABELS.json';
+% jobs{end + 1} = './jobs/DELIRIUM.json';
+% jobs{end + 1} = './jobs/MatchingCases_T1T2DWIFlair.json';
+% jobs{end + 1} = './jobs/MRBrainS18.json';
+% jobs{end + 1} = './jobs/IXI.json';
+% jobs{end + 1} = './jobs/OASIS-LONG.json';
+% jobs{end + 1} = './jobs/OASIS-MICCAI.json';
+% jobs{end + 1} = './jobs/ROB.json';
+% jobs{end + 1} = './jobs/IXI.json';
+
+if TEST_LEVEL == 0 || TEST_LEVEL == 3
+    
+    %--------------------------------------------------------------------------
+    % Prepare code for running on the Holly cluster   
+    %--------------------------------------------------------------------------        
+    
+    % Copy most recent code to holly
+    dir_holly = '/data/mbrud/Holly/code/batch-preprocessing-toolbox';
+    if exist(dir_holly,'dir'), rmdir(dir_holly,'s'); end; mkdir(dir_holly);   
+    copyfile(dir_core_functions,dir_holly);
+    
+    dir_holly = '/data/mbrud/Holly/code/auxiliary-functions';
+    if exist(dir_holly,'dir'), rmdir(dir_holly,'s'); end; mkdir(dir_holly);   
+    copyfile(fullfile(dir_auxiliary_toolbox,'*.m'),dir_holly);
+    
+    dir_holly = '/data/mbrud/Holly/code/mtv-preproc';
+    if exist(dir_holly,'dir'), rmdir(dir_holly,'s'); end; mkdir(dir_holly);   
+    copyfile(dir_mtv_preproc,dir_holly);
 end
-if ~isempty(dir_2d), 
-    spm_json_manager('init_dat',dir_2d,fullfile(dir_2d,fname)); 
+
+%--------------------------------------------------------------------------
+% Begin processing
+%--------------------------------------------------------------------------
+
+for j=1:numel(jobs)
+    
+    %----------------------------------------------------------------------
+    % Get a job
+    %----------------------------------------------------------------------
+    
+    job = jobs{j};
+    
+    %----------------------------------------------------------------------
+    % Init algorithm 
+    %----------------------------------------------------------------------
+
+    % Get job parameters
+    [job,holly] = preproc_default(job,TEST_LEVEL);
+
+    % Change some parameters
+    if ~isempty(VX),  job.preproc.vx = VX;  end
+    if ~isempty(RAM), holly.job.mem  = RAM; end
+    if ~isempty(S),   job.S          = S;   end
+    
+    % Create data object
+    dat = spm_json_manager('init_dat',job.dir_population);
+    dat = dat(1:min(job.S,numel(dat)));
+
+    % Build directory structure
+    [dir_preproc,dir_2d] = build_folder_structure(job);
+
+    % Create options struct
+    opt = init_opt(job,dir_preproc,dir_2d);
+
+    %----------------------------------------------------------------------
+    % Start processing images
+    %----------------------------------------------------------------------
+
+    print_progress('Started');
+    [~,~] = distribute(holly,'process_subject','inplace',dat,opt);
+    
+    spm_json_manager('make_pth_relative',dir_preproc,false);
+
+    % Create dat.mat objects (for faster loading of population)
+    fname = 'dat.mat';
+    if job.write_3d
+        cd(dir_preproc);
+        spm_json_manager('init_dat','.',fullfile('.',fname));
+        
+        here = fileparts(mfilename('fullpath'));
+        cd(here);
+    else
+        if exist(dir_preproc,'dir')
+            rmdir(dir_preproc,'s');  
+        end
+    end
+    if ~isempty(dir_2d)
+        cd(dir_2d);
+        spm_json_manager('make_pth_relative','.',false);
+        spm_json_manager('init_dat','.',fullfile('.',fname)); 
+        
+        here = fileparts(mfilename('fullpath'));
+        cd(here);
+    end        
+    
+    print_progress('Finished');
 end
 %==========================================================================
 
