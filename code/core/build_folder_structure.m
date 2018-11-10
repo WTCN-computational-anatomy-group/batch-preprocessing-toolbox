@@ -26,6 +26,9 @@ end
 
 %==========================================================================
 function nam = append_nam(nam,job)
+if job.preproc.reset_origin
+    nam = [nam '-ro'];
+end        
 if job.preproc.do_realign2mni
     nam = [nam '-ra'];
 end        
@@ -56,6 +59,9 @@ if job.preproc.do_ds_inplane
 end   
 if job.preproc.do_ds_throughplane
     nam = [nam '-dsz'];
+end        
+if job.preproc.resize
+    nam = [nam '-rsz'];
 end        
 if job.preproc.do_bf_correct
     nam = [nam '-bf'];

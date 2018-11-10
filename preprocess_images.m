@@ -23,35 +23,27 @@ addpath(dir_mtv_preproc)
 %--------------------------------------------------------------------------
 
 TEST_LEVEL = 0; % 0: no testing | 1: 1 subject | 2: 8 subjects (parfor) | 3: 16 subjects (holly)
-
-VX  = 2;
-RAM = '5G';
-S   = Inf;
+VX         = [];
+RAM        = '8G';
+S          = Inf;
 
 %--------------------------------------------------------------------------
 % Define list of jobs
 %--------------------------------------------------------------------------
 
 jobs          = {};
-% jobs{end + 1} = './jobs/special/MRBrainS18-3class.json';
-% jobs{end + 1} = './jobs/special/OASIS-MICCAI-3class.json';
 
-% jobs{end + 1} = './jobs/special/MRBrainS18-challenge.json';
-% jobs{end + 1} = './jobs/special/MRBrainS18-superres.json';
-% jobs{end + 1} = './jobs/special/CROMIS-denoise.json';
-% jobs{end + 1} = './jobs/special/OASIS-LONG-yael.json';
+% Haem template
+% jobs{end + 1} = './jobs/default/MRBrainS18-3class.json';
+% jobs{end + 1} = './jobs/default/ATLAS.json';
+% jobs{end + 1} = './jobs/default/CROMIS.json';
+% jobs{end + 1} = './jobs/default/CROMIS-LABELS.json';
+% jobs{end + 1} = './jobs/default/IXI.json';
+% jobs{end + 1} = './jobs/default/ROB.json';
 
-% jobs{end + 1} = './jobs/ATLAS.json';
-jobs{end + 1} = './jobs/CROMIS.json';
-jobs{end + 1} = './jobs/CROMIS-LABELS.json';
-% jobs{end + 1} = './jobs/DELIRIUM.json';
-% jobs{end + 1} = './jobs/MatchingCases_T1T2DWIFlair.json';
-% jobs{end + 1} = './jobs/MRBrainS18.json';
-% jobs{end + 1} = './jobs/IXI.json';
-% jobs{end + 1} = './jobs/OASIS-LONG.json';
-% jobs{end + 1} = './jobs/OASIS-MICCAI.json';
-% jobs{end + 1} = './jobs/ROB.json';
-% jobs{end + 1} = './jobs/IXI.json';
+% MRF-Net
+% jobs{end + 1} = './jobs/MRF-Net/MRBrainS18-3class-T1.json';
+jobs{end + 1} = './jobs/MRF-Net/OASIS-MICCAI-3class.json'; % PROBLEM HERE!
 
 if TEST_LEVEL == 0 || TEST_LEVEL == 3
     
@@ -100,7 +92,7 @@ for j=1:numel(jobs)
     % Create data object
     dat = spm_json_manager('init_dat',job.dir_population);
     dat = dat(1:min(job.S,numel(dat)));
-
+        
     % Build directory structure
     [dir_preproc,dir_2d] = build_folder_structure(job);
 

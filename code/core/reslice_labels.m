@@ -1,64 +1,53 @@
-function nii_res = reslice_labels(V_reference,nii_labels)
+function Niio = reslice_labels(V_ref,Nii)
 
+% Parameters
+deg     = 1;
+ref     = 1;
+dt      = [spm_type('float32') spm_platform('bigend')];
+
+% Create spm_vol object and put reference at index 1
 V    = spm_vol;
-V(1) = V_reference;
-dm0  = V_reference.dim;
+V(1) = V_ref;
+dm   = V_ref.dim;
 
-labels = nii_labels.dat(:,:,:);
-
-% figure; imshow3D(labels)
-
+% Get labels, etc
+labels        = Nii.dat(:,:,:);
 lkp           = unique(labels)';
-lkp(lkp == 0) = [];
-Kl            = numel(lkp);
-
-fname         = nii_labels.dat.fname;
+K             = numel(lkp); % Number of labels
+fname         = Nii.dat.fname;
 [pth,nam,ext] = fileparts(fname);
 
-nlabels = zeros([dm0 Kl],'single');
+% Iterate over each label and create a resliced label image (nlabels)
+labelso = zeros([dm K],'single');
 cnt     = 1;
 for k=lkp
-    bin_labels = single(labels==k);
-%     bin_labels = bin_labels + 1e-2*rand(size(bin_labels));
-%     spm_imbasics('smooth_img_in_mem',bin_labels,1);
-    
-    nfname = fullfile(pth,['tmp-' nam ext]);    
-    spm_misc('create_nii',nfname,bin_labels,nii_labels.mat,nii_labels.dat.dtype,nii_labels.descrip,nii_labels.dat.offset,nii_labels.dat.scl_slope,nii_labels.dat.scl_inter);        
-    clear bin_labels
-    
+    labels_k = single(labels == k);
+
+    % Smooth
+    labels_k = convn(labels_k,reshape([0.25 0.5 0.25],[3,1,1]),'same');
+    labels_k = convn(labels_k,reshape([0.25 0.5 0.25],[1,3,1]),'same');
+    labels_k = convn(labels_k,reshape([0.25 0.5 0.25],[1,1,3]),'same');
+                
+    fname_k = fullfile(pth,['n' nam ext]);    
+    spm_misc('create_nii',fname_k,labels_k,Nii.mat,dt,'Resliced labels');        
+        
     % Reslice
-    V(2)  = spm_vol(nfname);
-    rV    = spm_impreproc('reslice',V,0,1);
-    rlabels = rV(2).private.dat(:,:,:);
-    
-    nlabels(:,:,:,cnt) = cat(4,rlabels);
+    V(2)     = spm_vol(fname_k);
+    Vo       = spm_impreproc('reslice',V,deg,ref);
+    labels_k = single(Vo(2).private.dat(:,:,:));
+
+    labelso(:,:,:,cnt) = cat(4,labels_k);
     
     cnt = cnt + 1;
 end
+clear labels labels_k
 delete(fname);
-% figure; imshow3D(squeeze(nlabels(:,:,floor(dm0(3)/2) + 1,:)))
 
-dm      = size(nlabels);
-nlabels = reshape(nlabels,[prod(dm(1:3)) dm(4)]);
-msk     = sum(nlabels,2) > 0;
+% Get MLs of resliced labels
+[~,ml] = max(labelso,[],4);
+ml     = ml - 1;
 
-% figure(3); imshow3D(reshape(msk,dm(1:3)))
-
-nlabels1 = zeros([nnz(msk) dm(4)],'single');
-for k=1:dm(4)
-    nlabels1(:,k) = nlabels(msk,k);
-end
-
-[~,mllabels] = max(nlabels1,[],2);
-% mllabels     = mllabels - 1;
-
-mllabels1      = zeros([prod(dm(1:3)) 1],'single');
-mllabels1(msk) = mllabels;
-
-mllabels1 = reshape(mllabels1,dm(1:3));
-
-% figure; imshow3D(mllabels1)
-
-nii_res            = nifti(rV(2).fname);
-nii_res.dat(:,:,:) = mllabels1;
+% Write output
+Niio            = nifti(Vo(2).fname);
+Niio.dat(:,:,:) = ml;
 %==========================================================================

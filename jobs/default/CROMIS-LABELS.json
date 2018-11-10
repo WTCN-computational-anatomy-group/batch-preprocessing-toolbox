@@ -1,18 +1,16 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MRBrainS18/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18-3class",
-    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18-3class-temp",
+    "dir_population":"/data/mbrud/populations/original/CROMIS-LABELS/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/CROMIS-LABELS",
+    "dir_2d":"/data/mbrud/populations/2d/CROMIS-LABELS",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
+        "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_realign2mni":true,
-        "do_reslice":true,
-        "part_labels":[[0],[1,2,7],[3,4,8],[5,6],[9,10]],
-        "vx":[],
-        "do_ds_inplane":false,
-        "do_superres":false,
+        "vx":1,
+        "do_denoise":false,
     },
     "holly":{
         "mode":"qsub",
@@ -23,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-LABELS",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-LABELS",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",

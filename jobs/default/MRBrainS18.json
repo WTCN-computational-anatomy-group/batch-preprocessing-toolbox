@@ -1,17 +1,19 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/CROMIS/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/CROMIS",
-    "dir_2d":"/data/mbrud/populations/2d/CROMIS",
+    "dir_population":"/data/mbrud/populations/original/MRBrainS18/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18",
+    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
-        "reset_origin":true,
-        "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_ds_throughplane":false,
-        "vx":1,
-        "do_denoise":true,
+        "do_realign2mni":true,
+        "do_reslice":true,
+        "do_coreg":true,
+        "part_labels":[[0],[1],[2],[3],[4],[5],[6],[7],[8],[9,10]],
+        "vx":[],
+        "do_ds_inplane":false,
+        "do_superres":false,
     },
     "holly":{
         "mode":"qsub",
@@ -22,10 +24,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
+            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
+            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",

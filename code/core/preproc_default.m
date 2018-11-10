@@ -105,6 +105,12 @@ end
 if ~isfield(job.preproc,'reslice2channel')
     job.preproc.reslice2channel = '';
 end
+if ~isfield(job.preproc,'resize')
+    job.preproc.resize = false;
+end
+if ~isfield(job.preproc,'reslice_labels')
+    job.preproc.reslice_labels = false;
+end
 
 % Holly stuff
 %----------------------------------------------------------------------

@@ -3,15 +3,14 @@ N = numel(V);
 
 obj          = struct;
 obj.bb       = NaN(2,3);
-obj.bb       = [-90 -126 -72; 90 90 108];
-obj.vox      = 2;
+obj.vox      = NaN;
 obj.affreg   = 'mni';
 obj.reg      = [0 0.001 0.5 0.05 0.2]*0.1;
 obj.fwhm     = 1;
-obj.samp     = 4;
+obj.samp     = 3;
 obj.biasfwhm = 60*ones(1,N);
-obj.mrf      = 2;    
-obj.cleanup  = 1;   
+obj.mrf      = 0;    
+obj.cleanup  = 0;
 
 if strcmpi(modality,'CT')
     obj.biasreg  = 10; 

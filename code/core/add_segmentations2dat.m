@@ -3,8 +3,11 @@ function dat = add_segmentations2dat(dat)
 m = 1; % ...one modality...
 n = 1; % ...and one image per channel       
     
-type   = {'c','rc','wc','mwc'};
-tissue = {'GM','WM','CSF','BONE','ST','BG'};
+% type   = {'c','rc','wc','mwc'};
+% tissue = {'GM','WM','CSF','BONE','ST','BG'};
+
+type   = {'c'};
+tissue = {'GM','WM','CSF'};
 
 T = numel(type);
 K = numel(tissue);

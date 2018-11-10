@@ -1,17 +1,16 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MRBrainS18/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18",
-    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18",
+    "dir_population":"/data/mbrud/populations/original/ROB/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/ROB",
+    "dir_2d":"/data/mbrud/populations/2d/ROB",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
+        "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_realign2mni":true,
-        "do_reslice":false,
-        "vx":[],
-        "do_ds_inplane":true,
-        "do_superres":true,
+        "vx":1,
+        "do_denoise":false,
     },
     "holly":{
         "mode":"qsub",
@@ -22,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-challenge",
+            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-challenge",
+            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",

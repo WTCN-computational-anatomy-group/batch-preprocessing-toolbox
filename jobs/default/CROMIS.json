@@ -1,21 +1,16 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MatchingCases_T1T2DWIFlair/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/MatchingCases_T1T2DWIFlair",
-    "dir_2d":"/data/mbrud/populations/2d/MatchingCases_T1T2DWIFlair",
+    "dir_population":"/data/mbrud/populations/original/CROMIS/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/CROMIS",
+    "dir_2d":"/data/mbrud/populations/2d/CROMIS",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
         "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_coreg":true,
-        "do_ds_inplane":false,
-        "do_reslice":false,
-        "vx":[],
-        "do_superres":true,
-    },
-    "segment":{ 
-    "write_tc":true,
+        "vx":1,
+        "do_denoise":false,
     },
     "holly":{
         "mode":"qsub",
@@ -26,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MatchingCases_T1T2DWIFlair",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MatchingCases_T1T2DWIFlair",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
