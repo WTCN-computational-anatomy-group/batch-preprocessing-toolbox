@@ -1,17 +1,19 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/ATLAS/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/ATLAS",
-    "dir_2d":"/data/mbrud/populations/2d/ATLAS",
-    "write_2d":true,
+    "dir_population":"/data/mbrud/populations/original/DELIRIUM/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/mtv/DELIRIUM",
+    "dir_2d":"/data/mbrud/populations/2d/mtv/DELIRIUM",
+    "write_2d":false,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
         "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "vx":[],
+        "do_ds_throughplane":false,
+        "vx":1,
     },
     "holly":{
-        "mode":"qsub",		
+        "mode":"qsub",
         "verbose":true,
         "clean":false,
         "clean_init":true,
@@ -19,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS",
+            "folder":"/data/mbrud/Holly/preprocess_images/DELIRIUM",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS",
+            "folder":"/data/mbrud/Holly/preprocess_images/DELIRIUM",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -31,7 +33,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

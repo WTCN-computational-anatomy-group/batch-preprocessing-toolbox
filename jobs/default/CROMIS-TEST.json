@@ -1,15 +1,15 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/CROMIS/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/CROMIS",
-    "dir_2d":"/data/mbrud/populations/2d/CROMIS",
-    "write_2d":true,
+    "dir_population":"/data/mbrud/populations/original/CROMIS-TEST",
+    "dir_preproc":"/data/mbrud/populations/preproc/haem/CROMIS-TEST",
+    "dir_2d":"/data/mbrud/populations/2d/haem/CROMIS-TEST",
+    "write_2d":false,
     "S":"Inf",
     "preproc":{  
         "reset_origin":true,
         "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "vx":1,
+        "vx":2,
         "do_denoise":false,
     },
     "holly":{
@@ -21,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-TEST",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-TEST",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -33,7 +33,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

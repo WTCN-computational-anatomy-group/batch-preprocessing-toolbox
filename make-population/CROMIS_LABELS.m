@@ -2,16 +2,24 @@ clear; clc;
 
 addpath('/data/mbrud/dev/auxiliary-functions/');
 
-f  = '/home/mbrud/Data/labels/CROMIS-Parashkev-manual/converted_all';
+f0 = '/home/mbrud/Data/labels/CROMIS-Parashkev-manual/labels';
+d  = dir(f0);
+d  = d(3:end);
+S  = numel(d);
 
-files = spm_select('FPList',f,'^.*\.nii$');
-S     = size(files,1);
+fn = '/data/mbrud/populations/original/CROMIS-LABELS/';
 
 %%
-for s=1:2:S
+for s=1:S
+    
+    ds    = fullfile(f0,d(s).name);    
+    files = spm_select('FPList',ds,'^.*\.nii$');
+    
     % Image
-    fname       = strtrim(files(s,:));
+    fname        = strtrim(files(1,:));
     [~,nam0,ext] = fileparts(fname);
+    nfname       = fullfile(fn,[nam0 ext]);
+    copyfile(fname,nfname);
     
     a            = struct;
     a.name       = nam0;
@@ -22,12 +30,14 @@ for s=1:2:S
 
     a = orderfields(a);
 
-    pth_json = fullfile(f,[nam0 '.json']);
+    pth_json = fullfile(fn,[nam0 '.json']);
     spm_jsonwrite(pth_json,a);
     
     % Labels
-    fname       = strtrim(files(s + 1,:));
-    [~,nam,ext] = fileparts(fname);
+    fname        = strtrim(files(2,:));
+    [~,nam1,ext] = fileparts(fname);
+    nfname       = fullfile(fn,[nam1 ext]);
+    copyfile(fname,nfname);
     
     a              = struct;
     a.name         = nam0;     
@@ -35,17 +45,18 @@ for s=1:2:S
     a.population   = 'CROMIS-LABELS';
     a.nam_modality = 'CT';
     a.ix_img       = 1;
-    a.pth          = [nam ext];
+    a.pth          = [nam1 ext];
     
     a = orderfields(a);
                 
-    pth_json = fullfile(f,[nam '.json']);
+    pth_json = fullfile(fn,[nam1 '.json']);
     spm_jsonwrite(pth_json,a);
 end
 
 %%
-dat = spm_json_manager('init_dat',f);
+dat = spm_json_manager('init_dat',fn);
 
+%%
 s  = 30;
 f1 = dat{s}.modality{1}.nii.dat.fname;
 f2 = dat{s}.label{1}.nii.dat.fname;

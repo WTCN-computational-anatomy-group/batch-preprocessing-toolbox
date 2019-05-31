@@ -1,42 +1,15 @@
 function dat = process_subject(dat,opt) 
 
-%--------------------------------------------------------------------------
-% 1.  Make copies
-% 2.  Reset origin
-% 3.  Rigidly realign to MNI space
-% 4.  Remove image data outside of the head
-% 5.  Coregister images
-% 6.  NN down-sampling in-plane
-% 7.  NN down-sampling through-plane
-% 8.  Create equally sized images by super-resolution
-% 9.  Reslice to size of image with largest FOV
-% 10. Change voxel size of image(s)
-% 11. Resize to SPM template dimensions
-% 12. Denoise images
-% 13. Simple normalisation of image intensities
-% 14. Segment using spm_preproc8
-% 15. Overwrite image data with bias-corrected version from spm_preproc8
-% 16. Skull-strip image data
-% 17. Write 2D versions
-%--------------------------------------------------------------------------
-
-% Get NN down-sampling through-planeoptions
+% Get options
 %--------------------------------------------------------------------------
 dir_preproc = opt.dir_preproc;
 dir_2d      = opt.dir_2d;
 axis_2d     = opt.axis_2d;
 write_2d    = opt.write_2d;
 preproc     = opt.preproc;
+segment     = opt.segment;
 M           = numel(dat.modality);
-deg         = preproc.deg;
-
-% Get indices of highest resolution image
-%--------------------------------------------------------------------------
-if numel(dat.modality) > 1
-    error('numel(dat.modality) > 1');
-end
-m              = 1; % We assume only one modality for now..
-[ixc,ixn,ixhr] = get_ix_hr(dat.modality{m});
+deg_2d      = preproc.deg_2d;
 
 % Make copies into dir_preproc (in order to not modify the original data)
 %--------------------------------------------------------------------------
@@ -119,133 +92,138 @@ if isfield(dat,'label')
         end
     end
     
+    % Collapse labels
+    %--------------------------------------------------------------------------
+    if ~isempty(preproc.labels.part)    
+        R = numel(dat.label);
+        for r=1:R
+            collapse_labels(dat.label{r}.nii,preproc.labels.part);                 
+        end    
+    end
+
     fprintf('done!\n')
 end
 
-% Reset origin
+% Re-orient and reset origin
 %--------------------------------------------------------------------------
 if preproc.reset_origin
     fprintf('Resetting origin... ')
-            
+
     for m=1:M        
         n = 1;
-        c = 1;
-        if isfield(dat.modality{m},'channel')                        
-            fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
-            mat0  = dat.modality{m}.channel{c}.nii(n).mat;
-        else
-            fname = dat.modality{m}.nii(n).dat.fname;
-            mat0  = dat.modality{m}.nii(n).mat;
-        end            
-        vx = spm_misc('vxsize',mat0);
-        
-        spm_impreproc('nm_reorient',fname,vx,'ro_',deg);  
-        if isfield(dat.modality{m},'channel')
-            [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ro_');
-        else
-            [dat.modality{m}.nii(n),nfname]            = update_nii(fname,'ro_');
+        if isfield(dat.modality{m},'channel'), C = numel(dat.modality{m}.channel);
+        else,                                  C = 1;
         end
-        
-        if isfield(dat.modality{m},'channel') && isfield(dat.modality{m}.channel{c},'json')
-            spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-        elseif isfield(dat.modality{m},'json')
-            spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-        end
-
-        spm_impreproc('reset_origin',nfname);
-
-        if isfield(dat.modality{m},'channel')
-            dat.modality{m}.channel{c}.nii(n) = nifti(nfname);
-        else
-            dat.modality{m}.nii(n)            = nifti(nfname);
-        end
-    end
-    
-    if isfield(dat,'label')
-        % Do labels too
-        R = numel(dat.label);
-        for r=1:R          
-            fname = dat.label{r}.nii.dat.fname;
-            mat0  = dat.label{r}.nii.mat;
-            vx    = spm_misc('vxsize',mat0);
+        for c=1:C
+            if isfield(dat.modality{m},'channel')                        
+                fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                mat0  = dat.modality{m}.channel{c}.nii(n).mat;
+            else
+                fname = dat.modality{m}.nii(n).dat.fname;
+                mat0  = dat.modality{m}.nii(n).mat;
+            end           
             
-            spm_impreproc('nm_reorient',fname,vx,'ro_',deg); 
+            vx = spm_misc('vxsize',mat0);
 
-            [dat.label{r}.nii,nfname] = update_nii(fname,'ro_');
+            if strcmpi(dat.modality{m}.name,'CT')
+                deg_ro = 1;
+            else
+                deg_ro = preproc.deg_ro;
+            end
+            
+            spm_impreproc('nm_reorient',fname,vx,'ro_',deg_ro);  
+            
+            if isfield(dat.modality{m},'channel')
+                [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'ro_');
+            else
+                [dat.modality{m}.nii(n),nfname]            = update_nii(fname,'ro_');
+            end
 
-            if isfield(dat.label{r},'json')
-                spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);
+            if isfield(dat.modality{m},'channel') && isfield(dat.modality{m}.channel{c},'json')
+                spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+            elseif isfield(dat.modality{m},'json')
+                spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
             end
 
             spm_impreproc('reset_origin',nfname);
-            
-            dat.label{r}.nii = nifti(nfname);
+
+            if isfield(dat.modality{m},'channel')
+                dat.modality{m}.channel{c}.nii(n) = nifti(nfname);
+            else
+                dat.modality{m}.nii(n)            = nifti(nfname);
+            end
         end
     end
+%     
+%     if isfield(dat,'label')
+%         % Do labels too
+%         R = numel(dat.label);
+%         for r=1:R          
+%             fname = dat.label{r}.nii.dat.fname;
+%             mat0  = dat.label{r}.nii.mat;
+%             vx    = spm_misc('vxsize',mat0);
+%             
+%             spm_impreproc('nm_reorient',fname,vx,'ro_',0); 
+% 
+%             [dat.label{r}.nii,nfname] = update_nii(fname,'ro_');
+% 
+%             if isfield(dat.label{r},'json')
+%                 spm_json_manager('modify_json_field',dat.label{r}.json.pth,'pth',nfname);
+%             end
+% 
+%             spm_impreproc('reset_origin',nfname);
+%             
+%             dat.label{r}.nii = nifti(nfname);
+%         end
+%     end
         
     fprintf('done!\n')
-end
-
-% Collapse labels
-%--------------------------------------------------------------------------
-if isfield(dat,'label') && ~isempty(preproc.part_labels)    
-    R = numel(dat.label);
-    for r=1:R
-        collapse_labels(dat.label{r}.nii,preproc.part_labels);                 
-    end    
 end
 
 % Rigidly realign to MNI space
 %--------------------------------------------------------------------------
 if preproc.do_realign2mni   
-    fprintf('Realigning to MNI... ')
+    fprintf('Rigidly realigning to MNI space... ')
     
-    for m=1:M % Loop over modalities        
-        
-        if isfield(dat.modality{m},'channel')                        
-            fname                                 = dat.modality{m}.channel{ixc}.nii(ixn).dat.fname;  
-            mat1                                  = spm_impreproc('rigid_align',fname);                     
-            dat.modality{m}.channel{ixc}.nii(ixn) = nifti(fname);   
-                
+    for m=1:M        
+        if isfield(dat.modality{m},'channel')
             C = numel(dat.modality{m}.channel);
             for c=1:C
-                
                 N = numel(dat.modality{m}.channel{c}.nii);
                 for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
 
-                    
-                    if c==ixc && n==ixn
-                        continue; 
+                    mat = spm_impreproc('rigid_align',fname);
+
+                    if isfield(dat,'label') && strcmp(dat.modality{m}.channel{c}.name,preproc.labels.ref)
+                        mat1 = mat;
                     end
                     
-                    fname                             = dat.modality{m}.channel{c}.nii(n).dat.fname; 
-                    mat0                              = dat.modality{m}.channel{c}.nii(n).mat; 
-                    spm_get_space(fname,mat1\mat0);  
-                    dat.modality{m}.channel{c}.nii(n) = nifti(fname);                      
-                end                
-            end            
-        else                        
-            fname                    = dat.modality{m}.nii(ixn).dat.fname;  
-            mat1                     = spm_impreproc('rigid_align',fname);                     
-            dat.modality{m}.nii(ixn) = nifti(fname);   
-
+                    dat.modality{m}.channel{c}.nii(n) = nifti(fname);
+                end
+            end
+        else
             N = numel(dat.modality{m}.nii);
             for n=1:N
+                fname = dat.modality{m}.nii(n).dat.fname;
 
-                if n==ixn
-                    continue; 
+                mat = spm_impreproc('rigid_align',fname);
+
+                if isfield(dat,'label') && strcmp(dat.modality{m}.name,preproc.labels.ref)
+                    mat1 = mat;
                 end
-
-                fname                  = dat.modality{m}.nii(n).dat.fname; 
-                mat0                   = dat.modality{m}.nii(n).mat; 
-                spm_get_space(fname,mat1\mat0);  
-                dat.modality{m}.nii(n) = nifti(fname);                      
-            end                           
-        end
-    end % Loop over modalities    
                     
+                dat.modality{m}.nii(n) = nifti(fname);   
+            end
+        end       
+    end         
+                     
     if isfield(dat,'label')
-        % Do labels too
+        % Do labels too        
+        if ~exist('mat1','var')
+            mat1 = mat;
+        end
+        
         R = numel(dat.label);
         for r=1:R          
             fname = dat.label{r}.nii.dat.fname;
@@ -258,6 +236,13 @@ if preproc.do_realign2mni
                     
     fprintf('done!\n')
 end               
+
+% Co-register images
+%--------------------------------------------------------------------------
+if preproc.do_coreg
+    dat = do_coregister(dat,M,1);
+%     dat = do_coregister_altern(dat,M);
+end
 
 % Remove image data outside of the head
 %--------------------------------------------------------------------------
@@ -340,16 +325,15 @@ if ~preproc.do_crop
     end    
 end
 
-% Co-register images
+% Resize
 %--------------------------------------------------------------------------
-if preproc.do_coreg
-    fprintf('Co-registering... ')
+if preproc.resize.do
+    fprintf('Resizing... ')
     
-    % Perform co-registration    
+    V   = spm_vol;
+    cnt = 0;            
     for m=1:M
-        if isfield(dat.modality{m},'channel')            
-            V   = spm_vol;
-            cnt = 0;            
+        if isfield(dat.modality{m},'channel')                                    
             C   = numel(dat.modality{m}.channel);
             for c=1:C
                 N = numel(dat.modality{m}.channel{c}.nii);
@@ -358,45 +342,94 @@ if preproc.do_coreg
                     cnt    = cnt + 1;
                     V(cnt) = spm_vol(fname);                    
                 end
-            end
-            
-            if cnt>1
-                [V,res,source_ix] = spm_impreproc('coreg',V,ixhr);
-                
-                cnt = 0;
-                for c=1:C
-                    N = numel(dat.modality{m}.channel{c}.nii);
-                    for n=1:N
-                        cnt                               = cnt + 1;
-                        dat.modality{m}.channel{c}.nii(n) = nifti(V(cnt).fname);                                                
-                    end
-                end
+            end        
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname  = dat.modality{m}.nii(n).dat.fname;
+                cnt    = cnt + 1;
+                V(cnt) = spm_vol(fname);                    
             end
         end
     end  
-        
-    if isfield(dat,'label')
-        % Do labels too
-        R = numel(dat.label);
-        for r=1:R          
-            fname       = dat.label{r}.nii.dat.fname;
-            nam_channel = dat.label{r}.nam_channel;
-            mat0        = dat.label{r}.nii.mat;
-            
-            for i=source_ix
-                if strcmpi(dat.modality{m}.channel{i}.name,nam_channel)
-                    mat1 = res{i}{1}.M;
-                    break
+    
+    for m=1:M        
+        if isfield(dat.modality{m},'channel')            
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    resize2mni_ged(dat.modality{m}.channel{c}.nii(n),preproc.resize.deg,preproc.resize.vx,preproc.resize.keep_neck,V); 
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'r_');
+                    
+                    if isfield(dat.modality{m}.channel{c},'json')
+                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                    end
                 end
             end
-            
-            spm_get_space(fname,mat1\mat0); 
-            dat.label{r}.nii = nifti(fname); 
-        end
-    end    
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N                                
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                resize2mni_ged(dat.modality{m}.nii(n),1,preproc.resize.vx,preproc.resize.keep_neck,V); 
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'r_');
+
+                if isfield(dat.modality{m},'json')
+                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+                end
+            end
+        end       
+    end   
     clear V
     
-    fprintf('done!\n')
+    fprintf('done!\n')       
+end
+
+% Resize
+%--------------------------------------------------------------------------
+if ~isempty(preproc.vx) && ~preproc.resize.do
+    fprintf('Resizing... ')
+    
+    for m=1:M        
+        if isfield(dat.modality{m},'channel')            
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
+
+                    resample_img(dat.modality{m}.channel{c}.nii(n),preproc.vx);                    
+
+                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'r_');
+                    
+                    if isfield(dat.modality{m}.channel{c},'json')
+                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                    end
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N                                
+                fname = dat.modality{m}.nii(n).dat.fname;
+
+                resample_img(dat.modality{m}.nii(n),preproc.vx);
+
+                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'r_');
+
+                if isfield(dat.modality{m},'json')
+                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+                end
+            end
+        end       
+    end   
+    clear V
+    
+    fprintf('done!\n')        
 end
 
 % NN down-sampling in-plane
@@ -557,153 +590,10 @@ if preproc.do_superres
     fprintf('done!\n')
 end                  
 
-% Reslice
+% Denoise images
 %--------------------------------------------------------------------------
-if preproc.do_reslice && ~preproc.do_superres  
-    fprintf('Reslicing... ')
-    
-    V      = spm_vol;
-    cnt    = 0;
-    for m=1:M
-        if isfield(dat.modality{m},'channel')
-            C        = numel(dat.modality{m}.channel);
-            chn_nams = cell(1,C);
-            for c=1:C
-                N           = numel(dat.modality{m}.channel{c}.nii);
-                chn_nams{c} = dat.modality{m}.channel{c}.name;
-                for n=1:N                         
-                    fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;                    
-                    cnt    = cnt + 1;
-                    V(cnt) = spm_vol(fname);                    
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                fname  = dat.modality{m}.nii(n).dat.fname;
-                cnt    = cnt + 1;
-                V(cnt) = spm_vol(fname);                
-            end
-        end  
-    end
-                        
-    if cnt>1                           
-        V = spm_impreproc('reslice',V,deg,ixhr); 
-        
-        cnt = 0;
-        for m=1:M
-            if isfield(dat.modality{m},'channel')
-                C = numel(dat.modality{m}.channel);
-                for c=1:C
-                    N = numel(dat.modality{m}.channel{c}.nii);
-                    for n=1:N
-                        cnt                               = cnt + 1;                                           
-                        dat.modality{m}.channel{c}.nii(n) = nifti(V(cnt).fname);  
-                        
-                        if isfield(dat.modality{m}.channel{c},'json')
-                            spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',V(cnt).fname);
-                        end
-                    end
-                end
-            else
-                N = numel(dat.modality{m}.nii);
-                for n=1:N
-                    cnt                    = cnt + 1;                                           
-                    dat.modality{m}.nii(n) = nifti(V(cnt).fname);
-                    
-                    if isfield(dat.modality{m},'json')
-                        spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',V(cnt).fname);
-                    end
-                end
-            end  
-        end
-        
-    end
-    clear V
-        
-    fprintf('done!\n')
-end
-
-% Change voxel size of image(s)
-%--------------------------------------------------------------------------
-if ~isempty(preproc.vx) && ~preproc.do_superres
-    fprintf('Changing voxel sizes... ')
-    
-    for m=1:M        
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
-
-                    spm_impreproc('nm_reorient',fname,preproc.vx,'vx_',deg);  
-
-                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'vx_');
-
-                    if isfield(dat.modality{m}.channel{c},'json')
-                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-                    end
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                fname = dat.modality{m}.nii(n).dat.fname;
-
-                spm_impreproc('nm_reorient',fname,preproc.vx,'vx_',deg);  
-
-                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'vx_');
-
-                if isfield(dat.modality{m},'json')
-                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-                end
-            end
-        end       
-    end
-    
-    fprintf('done!\n')
-end
-
-% Resize
-%--------------------------------------------------------------------------
-if preproc.resize
-    fprintf('Resizing... ')
-    
-    for m=1:M        
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
-
-                    resize_nii(dat.modality{m}.channel{c}.nii(n)); 
-
-                    [dat.modality{m}.channel{c}.nii(n),nfname] = update_nii(fname,'r_');
-
-                    if isfield(dat.modality{m}.channel{c},'json')
-                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-                    end
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                fname = dat.modality{m}.nii(n).dat.fname;
-
-                resize_nii(dat.modality{m}.nii(n)); 
-
-                [dat.modality{m}.nii(n),nfname] = update_nii(fname,'r_');
-
-                if isfield(dat.modality{m},'json')
-                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-                end
-            end
-        end       
-    end   
-    
-    fprintf('done!\n')       
+if preproc.do_denoise
+    dat = do_denoise(dat,M,preproc);
 end
 
 % Reslice labels
@@ -712,8 +602,9 @@ if isfield(dat,'label')
     fprintf('Reslicing labels... ')
 
     % Create spm_vol of reference volume
-    V   = spm_vol;
-    cnt = 0;
+    V     = spm_vol;
+    cnt   = 0;
+    ixref = 1;
     for m=1:M
         if isfield(dat.modality{m},'channel')
             C        = numel(dat.modality{m}.channel);
@@ -725,6 +616,10 @@ if isfield(dat,'label')
                     fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;                    
                     cnt    = cnt + 1;
                     V(cnt) = spm_vol(fname);                    
+                    
+                    if strcmp(dat.modality{m}.channel{c}.name,preproc.labels.ref)
+                        ixref = cnt;
+                    end
                 end
             end
         else
@@ -733,6 +628,10 @@ if isfield(dat,'label')
                 fname  = dat.modality{m}.nii(n).dat.fname;
                 cnt    = cnt + 1;
                 V(cnt) = spm_vol(fname);                
+                
+                if strcmp(dat.modality{m}.name,preproc.labels.ref)
+                    ixref = cnt;
+                end
             end
         end  
     end
@@ -740,7 +639,7 @@ if isfield(dat,'label')
     % Reslice labels
     R = numel(dat.label);
     for r=1:R          
-        nii = reslice_labels(V(ixhr),dat.label{r}.nii);
+        nii = reslice_labels(V(ixref),dat.label{r}.nii);
 
         dat.label{r}.nii = nii;                 
 
@@ -749,76 +648,6 @@ if isfield(dat,'label')
         end
     end
         
-    fprintf('done!\n')
-end
-
-% Denoise images
-%--------------------------------------------------------------------------
-if preproc.do_denoise
-    fprintf('Denoising... ')
-    
-    for m=1:M    
-        nii      = nifti;
-        modality = dat.modality{m}.name;
-        cnt      = 0;
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    cnt      = cnt + 1;
-                    fname    = dat.modality{m}.channel{c}.nii(n).dat.fname;
-                    nii(cnt) = nifti(fname);
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                cnt      = cnt + 1;
-                fname    = dat.modality{m}.nii(n).dat.fname;
-                nii(cnt) = nifti(fname);
-            end
-        end
-        
-        % Do denoising
-        nii_in = nii;
-        nii    = spm_mtv_preproc('InputImages',nii_in,'Modality',modality,'Verbose',0,'OutputDirectory',fileparts(nii(1).dat.fname));
-        for i=1:numel(nii)
-            delete(nii_in(i).dat.fname);
-        end
-        
-        cnt = 0;
-        if isfield(dat.modality{m},'channel')
-            C = numel(dat.modality{m}.channel);
-            for c=1:C
-                N = numel(dat.modality{m}.channel{c}.nii);
-                for n=1:N
-                    cnt                               = cnt + 1;
-                    dat.modality{m}.channel{c}.nii(n) = nii(cnt);   
-                    
-                    nfname = nii(cnt).dat.fname;
-                    
-                    if isfield(dat.modality{m}.channel{c},'json')
-                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
-                    end
-                end
-            end
-        else
-            N = numel(dat.modality{m}.nii);
-            for n=1:N
-                cnt                    = cnt + 1;
-                dat.modality{m}.nii(n) = nii(cnt);     
-                
-                nfname = nii(cnt).dat.fname;
-                
-                if isfield(dat.modality{m},'json')
-                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
-                end
-            end
-        end        
-    end    
-    clear nii
-    
     fprintf('done!\n')
 end
 
@@ -856,7 +685,7 @@ end
 
 % Segment using spm_preproc8
 %--------------------------------------------------------------------------
-if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct              
+if segment.do || preproc.do_skull_strip || preproc.do_bf_correct              
     fprintf('Segmenting... ')
 
     % For segmenting we assume... 
@@ -864,11 +693,9 @@ if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct
     n = 1; % ...and one image per channel        
     
     % Set-up output
-    write_tc = false(6,4); % c, rc, wc, mwc    
-    write_bf = [false false]; 
-    write_df = false(3,1);                       
-    
-    write_tc([1 2 3],1) = true;
+    write_tc = segment.tc;
+    write_bf = segment.bf;
+    write_df = segment.df;
     
     % Build spm_vol input-object to segmentation function
     if isfield(dat.modality{m},'channel')
@@ -884,7 +711,7 @@ if preproc.do_segment || preproc.do_skull_strip || preproc.do_bf_correct
     end  
     
     % Run segmentation
-    segment_preproc8(V,write_tc,write_bf,write_df,dir_preproc,dat.modality{m}.name);
+    segment_preproc8(V,write_tc,write_bf,write_df,dir_preproc,dat.modality{m}.name,segment);
      
     % Get output files
     dat = add_segmentations2dat(dat);
@@ -934,7 +761,7 @@ end
 
 % Clean-up
 %--------------------------------------------------------------------------
-if ~preproc.do_segment && (preproc.do_skull_strip || preproc.do_bf_correct)
+if ~segment.do && (preproc.do_skull_strip || preproc.do_bf_correct)
     fprintf('Cleaning-up... ')
     
     for t=1:numel(dat.segmentation)
@@ -1071,7 +898,7 @@ if write_2d
                 for n=1:N
                     fname = dat.modality{m}.channel{c}.nii(n).dat.fname;
 
-                    nfname = spm_imbasics('create_2d_slice',fname,deg,axis_2d);
+                    nfname = spm_imbasics('create_2d_slice',fname,deg_2d,axis_2d);
 
                     dat.modality{m}.channel{c}.nii(n) = nifti(nfname);
 
@@ -1085,7 +912,7 @@ if write_2d
             for n=1:N
                 fname = dat.modality{m}.nii(n).dat.fname;
 
-                nfname = spm_imbasics('create_2d_slice',fname,deg,axis_2d);
+                nfname = spm_imbasics('create_2d_slice',fname,deg_2d,axis_2d);
 
                 dat.modality{m}.nii(n) = nifti(nfname);
 
@@ -1101,7 +928,7 @@ if write_2d
         for r=1:R
             fname  = dat.label{r}.nii.dat.fname;
             
-            nfname = spm_imbasics('create_2d_slice',fname,deg,axis_2d);
+            nfname = spm_imbasics('create_2d_slice',fname,deg_2d,axis_2d);
 
             dat.label{r}.nii = nifti(nfname);
 
@@ -1118,7 +945,7 @@ if write_2d
             for k=1:K
                 fname = dat.segmentation{t}.class{k}.nii.dat.fname;
                 
-                nfname = spm_imbasics('create_2d_slice',fname,deg,axis_2d);                
+                nfname = spm_imbasics('create_2d_slice',fname,deg_2d,axis_2d);                
                 
                 dat.segmentation{t}.class{k}.nii = nifti(nfname);
 
@@ -1153,14 +980,74 @@ img  = scl*img;
 %==========================================================================   
 
 %==========================================================================   
-function [ixc,ixn,ref_ix] = get_ix_hr(modality)
-prod_vx = [];
-if isfield(modality,'channel')
-    C = numel(modality.channel);
+function [ixc,ixn,ref_ix,ixm,hac_ct] = get_ix_hr(dat,opt)
+prod_vx  = [];
+ixm      = 1;
+M        = numel(dat.modality);
+resl_ref = opt.preproc.resl_ref;
+
+% Check if there is any CT data
+hac_ct = false;
+for m=1:M
+    if strcmpi(dat.modality{m}.name,'CT')
+        hac_ct = true;
+        break
+    end
+end
+
+if ~isempty(resl_ref)
+    % Reference reslice image given
+    ref_exists = false;
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                name = dat.modality{m}.channel{c}.name;
+                
+                if strcmpi(resl_ref,name)
+                    ixc    = c;
+                    ixn    = 1;                    
+                    ixm    = m;
+                    ref_exists = true;
+                end
+            end
+        else
+            name = dat.modality{m}.name;
+            
+            if strcmpi(resl_ref,name)
+                ixc    = 1;
+                ixn    = 1;                    
+                ixm    = m;
+                ref_exists = true;
+            end
+        end
+    end
+    
+    if ref_exists == true
+        % Reference found
+        ref_ix = (ixm - 1) + ixc;
+        
+        return
+    end
+end
+
+if M == 1 && ~isfield(dat.modality{1},'channel')
+    % Only CT
+    ixc = 1;
+    N = numel(dat.modality{1}.nii);
+    for n=1:N
+        vx      = spm_misc('vxsize',dat.modality{1}.nii(n).mat);
+        prod_vx = [prod_vx prod(vx)];
+    end
+    [~,ixn] = min(prod_vx);
+    ref_ix  = ixn;    
+elseif M == 1 && isfield(dat.modality{1},'channel')
+    % Only MRI
+    C = numel(dat.modality{1}.channel);
     for c=1:C
-        N = numel(modality.channel{c}.nii);
+        N = numel(dat.modality{1}.channel{c}.nii);
         for n=1:N
-            vx      = spm_misc('vxsize',modality.channel{c}.nii(n).mat);
+            vx      = spm_misc('vxsize',dat.modality{1}.channel{c}.nii(n).mat);
             prod_vx = [prod_vx prod(vx)];
         end
     end
@@ -1168,7 +1055,7 @@ if isfield(modality,'channel')
 
     cnt = 0;
     for c=1:C
-        N = numel(modality.channel{c}.nii);
+        N = numel(dat.modality{1}.channel{c}.nii);
         for n=1:N
             cnt = cnt + 1;
             if cnt==ref_ix
@@ -1178,13 +1065,399 @@ if isfield(modality,'channel')
         end
     end
 else
-    ixc = 1;
-    N = numel(modality.nii);
-    for n=1:N
-        vx      = spm_misc('vxsize',modality.nii(n).mat);
-        prod_vx = [prod_vx prod(vx)];
+    % CT and MRI
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    vx      = spm_misc('vxsize',dat.modality{m}.channel{c}.nii(n).mat);
+                    prod_vx = [prod_vx prod(vx)];
+                end
+            end
+            [~,ref_ix] = min(prod_vx);
+
+            cnt = 0;
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt = cnt + 1;
+                    if cnt==ref_ix
+                        ixc = c;
+                        ixn = n;
+                    end
+                end
+            end
+            
+            ref_ix = ref_ix + (m - 1);
+            ixm    = m;
+        end
     end
-    [~,ixn] = min(prod_vx);
-    ref_ix  = ixn;
 end
 %==========================================================================   
+
+%==========================================================================
+function dat = do_reslice(dat,preproc,M,ixhr,hac_ct)
+fprintf('Reslicing... ')
+
+V   = spm_vol;
+cnt = 0;            
+for m=1:M
+    if isfield(dat.modality{m},'channel')                                    
+        C   = numel(dat.modality{m}.channel);
+        for c=1:C
+            N = numel(dat.modality{m}.channel{c}.nii);
+            for n=1:N
+                fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                cnt    = cnt + 1;
+                V(cnt) = spm_vol(fname);                    
+            end
+        end        
+    else
+        N = numel(dat.modality{m}.nii);
+        for n=1:N
+            fname  = dat.modality{m}.nii(n).dat.fname;
+            cnt    = cnt + 1;
+            V(cnt) = spm_vol(fname);                    
+        end
+    end
+end   
+
+if cnt>1        
+    if hac_ct
+        deg_res = 1;
+    else
+        deg_res = preproc.deg_res;
+    end
+            
+    V = spm_impreproc('reslice',V,deg_res,ixhr); 
+
+    cnt = 0;
+    for m=1:M
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt                               = cnt + 1;                                           
+                    dat.modality{m}.channel{c}.nii(n) = nifti(V(cnt).fname);  
+
+                    if isfield(dat.modality{m}.channel{c},'json')
+                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',V(cnt).fname);
+                    end
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                cnt                    = cnt + 1;                                           
+                dat.modality{m}.nii(n) = nifti(V(cnt).fname);
+
+                if isfield(dat.modality{m},'json')
+                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',V(cnt).fname);
+                end
+            end
+        end  
+    end
+
+end
+clear V
+
+fprintf('done!\n')
+%==========================================================================    
+
+%==========================================================================
+function dat = do_coregister_altern(dat,M)
+fprintf('Co-registering (alternating)... ')
+
+% Perform co-registration    
+V   = spm_vol;
+cnt = 0;            
+for m=1:M
+    if isfield(dat.modality{m},'channel')                                    
+        C   = numel(dat.modality{m}.channel);
+        for c=1:C
+            N = numel(dat.modality{m}.channel{c}.nii);
+            for n=1:N
+                fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                cnt    = cnt + 1;
+                V(cnt) = spm_vol(fname);                    
+            end
+        end        
+    else
+        N = numel(dat.modality{m}.nii);
+        for n=1:N
+            fname  = dat.modality{m}.nii(n).dat.fname;
+            cnt    = cnt + 1;
+            V(cnt) = spm_vol(fname);                    
+        end
+    end
+end          
+
+if cnt > 1
+   for i=1:numel(V)       
+       V = spm_impreproc('coreg',V,i);
+   end
+   
+   cnt = 0;            
+    for m=1:M
+        if isfield(dat.modality{m},'channel')                                    
+            C   = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt                               = cnt + 1;
+                    dat.modality{m}.channel{c}.nii(n) = nifti(V(cnt).fname);                      
+                end
+            end        
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                cnt                    = cnt + 1;
+                dat.modality{m}.nii(n) = nifti(V(cnt).fname);                   
+            end
+        end
+    end 
+end
+
+fprintf('done!\n')
+%==========================================================================    
+
+%==========================================================================
+function dat = do_coregister(dat,M,ixhr)
+fprintf('Co-registering... ')
+
+% Perform co-registration    
+V   = spm_vol;
+cnt = 0;            
+for m=1:M
+    if isfield(dat.modality{m},'channel')                                    
+        C   = numel(dat.modality{m}.channel);
+        for c=1:C
+            N = numel(dat.modality{m}.channel{c}.nii);
+            for n=1:N
+                fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                cnt    = cnt + 1;
+                V(cnt) = spm_vol(fname);                    
+            end
+        end        
+    else
+        N = numel(dat.modality{m}.nii);
+        for n=1:N
+            fname  = dat.modality{m}.nii(n).dat.fname;
+            cnt    = cnt + 1;
+            V(cnt) = spm_vol(fname);                    
+        end
+    end
+end          
+
+if cnt>1
+    [V,res,source_ix] = spm_impreproc('coreg',V,ixhr);
+
+    cnt = 0;            
+    for m=1:M
+        if isfield(dat.modality{m},'channel')                                    
+            C   = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt                               = cnt + 1;
+                    dat.modality{m}.channel{c}.nii(n) = nifti(V(cnt).fname);                      
+                end
+            end        
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                cnt                    = cnt + 1;
+                dat.modality{m}.nii(n) = nifti(V(cnt).fname);                   
+            end
+        end
+    end          
+end
+
+if isfield(dat,'label')
+    % Do labels too
+    R = numel(dat.label);
+    for r=1:R          
+        fname       = dat.label{r}.nii.dat.fname;
+        nam_channel = dat.label{r}.nam_channel;
+        mat0        = dat.label{r}.nii.mat;
+
+        for i=source_ix
+            if strcmpi(dat.modality{m}.channel{i}.name,nam_channel)
+                mat1 = res{i}{1}.M;
+                break
+            end
+        end
+
+        spm_get_space(fname,mat1\mat0); 
+        dat.label{r}.nii = nifti(fname); 
+    end
+end    
+clear V
+
+fprintf('done!\n')
+%==========================================================================    
+
+%==========================================================================  
+function dat = do_denoise(dat,M,preproc)
+fprintf('Denoising... ')
+
+if preproc.mc_denoise
+    % Uses MTV denoising if C>1 for one modality
+    for m=1:M    
+        nii      = nifti;
+        modality = dat.modality{m}.name;
+        cnt      = 0;
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt      = cnt + 1;
+                    fname    = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                    nii(cnt) = nifti(fname);
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                cnt      = cnt + 1;
+                fname    = dat.modality{m}.nii(n).dat.fname;
+                nii(cnt) = nifti(fname);
+            end
+        end
+
+        % Do denoising
+        nii_in = nii;
+        nii    = spm_mtv_preproc('InputImages',nii_in,'Modality',modality,'Verbose',0,'OutputDirectory',fileparts(nii(1).dat.fname),'WorkersParfor',preproc.mtv_workers);
+        for i=1:numel(nii)
+            delete(nii_in(i).dat.fname);
+        end
+
+        cnt = 0;
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    cnt                               = cnt + 1;
+                    dat.modality{m}.channel{c}.nii(n) = nii(cnt);   
+
+                    nfname = nii(cnt).dat.fname;
+
+                    if isfield(dat.modality{m}.channel{c},'json')
+                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                    end
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                cnt                    = cnt + 1;
+                dat.modality{m}.nii(n) = nii(cnt);     
+
+                nfname = nii(cnt).dat.fname;
+
+                if isfield(dat.modality{m},'json')
+                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+                end
+            end
+        end        
+    end            
+else
+    % Denoises on a per-channel basis
+    for m=1:M    
+        modality = dat.modality{m}.name;
+        if isfield(dat.modality{m},'channel')
+            C = numel(dat.modality{m}.channel);
+            for c=1:C
+                N = numel(dat.modality{m}.channel{c}.nii);
+                for n=1:N
+                    fname  = dat.modality{m}.channel{c}.nii(n).dat.fname;
+                    nii_in = nifti(fname);
+
+                    % Denoise
+                    nii = spm_mtv_preproc('InputImages',nii_in,'Modality',modality,'Verbose',0,'OutputDirectory',fileparts(nii_in(1).dat.fname),'WorkersParfor',preproc.mtv_workers);                        
+                    delete(nii_in.dat.fname);
+
+                    % Assign
+                    dat.modality{m}.channel{c}.nii(n) = nii;  
+                    nfname                            = nii.dat.fname;
+                    if isfield(dat.modality{m}.channel{c},'json')
+                        spm_json_manager('modify_json_field',dat.modality{m}.channel{c}.json(n).pth,'pth',nfname);
+                    end
+                end
+            end
+        else
+            N = numel(dat.modality{m}.nii);
+            for n=1:N
+                fname  = dat.modality{m}.nii(n).dat.fname;
+                nii_in = nifti(fname);
+
+                % Denoise
+                nii = spm_mtv_preproc('InputImages',nii_in,'Modality',modality,'Verbose',0,'OutputDirectory',fileparts(nii_in(1).dat.fname),'WorkersParfor',preproc.mtv_workers);
+                delete(nii_in.dat.fname);
+
+                % Assign
+                dat.modality{m}.nii(n) = nii;  
+                nfname                 = nii.dat.fname;
+                if isfield(dat.modality{m},'json')
+                    spm_json_manager('modify_json_field',dat.modality{m}.json(n).pth,'pth',nfname);
+                end
+            end
+        end 
+    end      
+end
+clear nii
+
+fprintf('done!\n')
+%==========================================================================      
+
+%==========================================================================
+function resample_img(Nii,vx,deg,bc)
+% Resample an image using deg interpolation, with bc boundary conditions.
+% If samp < 1, does down-sampling; if samp > 1, does up-sampling.
+%_______________________________________________________________________
+%  Copyright (C) 2018 Wellcome Trust Centre for Neuroimaging
+
+if nargin < 3, deg = 1; end
+if nargin < 4, bc  = 0; end
+
+if numel(vx)   == 1, vx  = vx*ones([1 3]); end
+if numel(deg)  == 1, deg = deg*ones([1 3]);  end
+if numel(bc)   == 1, bc  = bc*ones([1 3]);   end
+
+% Input image properties
+img  = Nii.dat(:,:,:);
+mat0 = Nii.mat;
+dm0  = size(img);
+vx0  = sqrt(sum(mat0(1:3,1:3).^2));
+
+samp = vx0./vx;
+
+% Output image properties
+D    = diag([samp 1]);
+mat  = mat0/D;
+dm   = floor(D(1:3,1:3)*dm0')';
+
+% Make interpolation grid
+[x0,y0,z0] = ndgrid(1:dm(1),1:dm(2),1:dm(3));
+
+T = mat0\mat;    
+
+x1 = T(1,1)*x0 + T(1,2)*y0 + T(1,3)*z0 + T(1,4);
+y1 = T(2,1)*x0 + T(2,2)*y0 + T(2,3)*z0 + T(2,4);
+z1 = T(3,1)*x0 + T(3,2)*y0 + T(3,3)*z0 + T(3,4);
+
+% Resample
+img                         = spm_bsplins(img,x1,y1,z1,[deg bc]);    
+img(~isfinite(img)) = 0;
+
+fname         = Nii.dat.fname;
+[pth,nam,ext] = fileparts(fname);
+nfname        = fullfile(pth,['r_' nam ext]);
+        
+spm_misc('create_nii',nfname,img,mat,Nii.dat.dtype,Nii.descrip,Nii.dat.offset,Nii.dat.scl_slope,Nii.dat.scl_inter);
+%==========================================================================

@@ -1,17 +1,24 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MRBrainS18/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18-3class",
-    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18-3class",
+    "dir_population":"/data/mbrud/populations/original/BALGRIST-T1",
+    "dir_preproc":"/data/mbrud/populations/preproc/t1-lab7/BALGRIST-T1",
+    "dir_2d":"/data/mbrud/populations/2d/t1-lab7/BALGRIST-T1",
     "write_2d":true,
     "S":"Inf",
+    "channel":["T1"],
     "preproc":{  
-        "do_crop":true,
+        "do_crop":false,
         "do_rem_neck":true,
         "do_realign2mni":true,
-        "do_reslice":true,
-        "do_coreg":true,
-        "part_labels":[[0],[1,2,7],[3,4,8],[5,6]],
-        "vx":[],
+        "resize":{
+            "do":true,
+            "deg":4,
+            "vx":[],
+            "keep_neck":false,
+        },
+        "labels":{
+            "part":[[0],[1],[3 4],[2],[5],[6],[7],[8]],
+            "ref":"T1",
+        },
     },
     "holly":{
         "mode":"qsub",
@@ -22,10 +29,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class",
+            "folder":"/data/mbrud/Holly/preprocess_images/BALGRIST-T1",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class",
+            "folder":"/data/mbrud/Holly/preprocess_images/BALGRIST-T1",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -34,7 +41,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

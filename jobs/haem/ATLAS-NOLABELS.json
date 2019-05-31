@@ -1,19 +1,18 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MRBrainS18-T1",
-    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18-3class-T1",
-    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18-3class-T1",
+    "dir_population":"/data/mbrud/populations/original/ATLAS-NOLABELS",
+    "dir_preproc":"/data/mbrud/populations/preproc/haem/ATLAS-NOLABELS",
+    "dir_2d":"/data/mbrud/populations/2d/haem/ATLAS-NOLABELS",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
+        "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_realign2mni":true,
-        "part_labels":[[0],[1,2,7],[3,4,8],[6]],
-        "vx":[],
-        "do_segment":true,        
+        "vx":1,
     },
     "holly":{
-        "mode":"qsub",
+        "mode":"qsub",		
         "verbose":true,
         "clean":false,
         "clean_init":true,
@@ -21,10 +20,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class-T1",
+            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS-NOLABELS",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class-T1",
+            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS-NOLABELS",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -33,7 +32,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

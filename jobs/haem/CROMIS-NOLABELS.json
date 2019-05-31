@@ -1,7 +1,7 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/ROB/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/ROB",
-    "dir_2d":"/data/mbrud/populations/2d/ROB",
+    "dir_population":"/data/mbrud/populations/original/CROMIS-NOLABELS",
+    "dir_preproc":"/data/mbrud/populations/preproc/haem/CROMIS-NOLABELS",
+    "dir_2d":"/data/mbrud/populations/2d/haem/CROMIS-NOLABELS",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
@@ -10,7 +10,8 @@
         "do_crop":true,
         "do_rem_neck":true,
         "vx":1,
-        "do_denoise":false,
+        "do_denoise":true,
+        "den_after_vx":true,
     },
     "holly":{
         "mode":"qsub",
@@ -21,10 +22,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-NOLABELS",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
+            "folder":"/data/mbrud/Holly/preprocess_images/CROMIS-NOLABELS",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -33,7 +34,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

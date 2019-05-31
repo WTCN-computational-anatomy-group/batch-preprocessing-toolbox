@@ -5,9 +5,13 @@ dir_preproc = strsplit(dir_preproc,filesep);
 nam = dir_preproc{end};    
 nam = append_nam(nam,job);
 
-dir_preproc = fullfile('/',dir_preproc{1:end - 1},nam);
+dir_preproc = fullfile(dir_preproc{1:end - 1},nam);
 
-if exist(dir_preproc,'dir'), rmdir(dir_preproc,'s'); end; mkdir(dir_preproc); 
+if strcmp(job.dir_preproc(1),filesep)
+    dir_preproc = [filesep dir_preproc];
+end
+
+if exist(dir_preproc,'dir') == 7, rmdir(dir_preproc,'s'); end; mkdir(dir_preproc); 
 
 if job.write_2d
     dir_2d = job.dir_2d;  
@@ -26,6 +30,13 @@ end
 
 %==========================================================================
 function nam = append_nam(nam,job)
+if ~isempty(job.channel)
+    nam1 = '';
+    for i=1:numel(job.channel)
+        nam1 = [nam1 job.channel{i}];
+    end
+    nam = [nam '_' nam1];
+end
 if job.preproc.reset_origin
     nam = [nam '-ro'];
 end        
@@ -42,17 +53,18 @@ if job.preproc.do_coreg
     nam = [nam '-reg'];
 end    
 if job.preproc.do_superres
-    nam = [nam '-sr'];
-elseif ~job.preproc.do_superres
-    if job.preproc.do_reslice 
-        nam = [nam '-res'];        
+    if job.preproc.mc_superres
+        nam = [nam '-mcsr'];
+    else
+        nam = [nam '-scsr'];
     end                           
 end         
-if ~isempty(job.preproc.vx)
-    nam = [nam '-vx' num2str(job.preproc.vx(1))];        
-end
 if job.preproc.do_denoise
-    nam = [nam '-den'];
+    if job.preproc.mc_denoise
+        nam = [nam '-mcden'];
+    else
+        nam = [nam '-scden'];
+    end
 end    
 if job.preproc.do_ds_inplane
     nam = [nam '-ds'];
@@ -60,8 +72,8 @@ end
 if job.preproc.do_ds_throughplane
     nam = [nam '-dsz'];
 end        
-if job.preproc.resize
-    nam = [nam '-rsz'];
+if job.preproc.resize.do
+    nam = [nam '-res'];
 end        
 if job.preproc.do_bf_correct
     nam = [nam '-bf'];
@@ -72,7 +84,9 @@ end
 if job.preproc.do_normalise_intensities
     nam = [nam '-ni'];
 end   
-if job.preproc.do_segment
+if job.segment.do
     nam = [nam '-seg'];
 end
+% deg = ['-deg' num2str(job.preproc.deg_ro) num2str(job.preproc.deg_res) num2str(job.preproc.deg_vx)];
+% nam = [nam deg];
 %==========================================================================   

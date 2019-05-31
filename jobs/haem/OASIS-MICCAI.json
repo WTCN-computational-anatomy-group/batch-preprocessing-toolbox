@@ -1,0 +1,45 @@
+{  
+    "dir_population":"/data/mbrud/populations/original/OASIS-MICCAI",
+    "dir_preproc":"/data/mbrud/populations/preproc/haem/OASIS-MICCAI",
+    "dir_2d":"/data/mbrud/populations/2d/haem/OASIS-MICCAI",
+    "write_2d":true,
+    "S":"Inf",
+    "channel":["T1"],
+    "preproc":{  
+        "do_realign2mni":true,
+        "resize":{
+            "do":true,
+            "deg":4,
+            "vx":[],
+            "keep_neck":false,
+        },
+        "labels":{
+            "part":[[0],[23 30 31 32 36 37 55 56 57 58 59 60 61 62 75 76 38 39 71 72 73 47 48 100 101 102 103 104 105 106 107 108 109 112 113 114 115 116 117 118 119 120 121 122 123 124 125 128 129 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 190 191 192 193 194 195 196 197 198 199 200 201 202 203 204 205 206 207],[35 40 41 44 45 69],[4 11 46 49 50 51 52]],
+            "ref":"T1",
+        },
+    },
+    "holly":{
+        "mode":"qsub",
+        "verbose":true,
+        "clean":false,
+        "clean_init":true,
+        "restrict":"char",
+        "server":{
+            "ip":"holly",
+            "login":"mbrud",
+            "folder":"/data/mbrud/Holly/preprocess_images/OASIS-MICCAI",
+        },
+        "client":{
+            "folder":"/data/mbrud/Holly/preprocess_images/OASIS-MICCAI",
+        },
+        "matlab":{
+            "bin":"/share/apps/matlabR2018a",
+            "addsub":"/data/mbrud/Holly/code/batch-preprocessing-toolbox",
+            "add":["/data/mbrud/Holly/code/auxiliary-functions","/data/mbrud/Holly/code/mtv-preproc"],            
+        },
+        "job":{
+            "est_mem":false,
+            "mem":"8G",
+        },
+    },
+}

@@ -1,18 +1,20 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MatchingCases_T1T2DWIFlair/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/MatchingCases_T1T2DWIFlair",
-    "dir_2d":"/data/mbrud/populations/2d/MatchingCases_T1T2DWIFlair",
+    "dir_population":"/data/mbrud/populations/original/MRBrainS18/dat.mat",
+    "dir_preproc":"/data/mbrud/populations/preproc/spine-11/MRBrainS18",
+    "dir_2d":"/data/mbrud/populations/2d/spine-11/MRBrainS18",
     "write_2d":true,
+    "axis_2d":1,
     "S":"Inf",
     "preproc":{  
-        "do_realign2mni":false,
+        "reset_origin":true,
         "do_crop":true,
-        "do_rem_neck":true,
-        "do_coreg":false,
-        "do_ds_inplane":false,
-        "do_reslice":false,
-        "vx":[],
-        "do_superres":false,
+        "do_rem_neck":false,
+        "do_realign2mni":true,
+        "do_reslice":true,
+        "do_coreg":true,
+        "part_labels":[[0],[1],[3 4],[2],[5 6],[7],[8]],
+        "vx":2,
+        "do_denoise":false,
     },
     "holly":{
         "mode":"qsub",
@@ -23,10 +25,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MatchingCases_T1T2DWIFlair",
+            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MatchingCases_T1T2DWIFlair",
+            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -35,7 +37,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

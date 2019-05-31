@@ -1,45 +1,54 @@
-function nii = resize_nii(nii)
+function Nii = resize2mni_ged(Nii,deg,vx,keep_neck,V_all)
+% FORMAT Nii = resize2mni(Nii,deg,vx,keep_neck,V)
+%
+% ...
+%
+%__________________________________________________________________________
+% Copyright (C) 2018 Wellcome Trust Centre for Neuroimaging
 
-pth_spm_tpm = fullfile(spm('dir'),'tpm','TPM.nii,');
-V           = spm_vol(pth_spm_tpm);
-V           = V(1);
-bb          = world_bb(V);
-
-vs = sqrt(sum(nii(1).mat(1:3,1:3).^2));
-dm = nii(1).dat.dim;
-if dm(3) == 1
-    bb(:,3) = 0;
+if nargin < 2, deg       = 4; end
+if nargin < 3, vx        = []; end
+if nargin < 4, keep_neck = true; end
+if nargin < 5, V_all     = []; end
+            
+if (isempty(vx) || vx == -1) && ~isempty(V_all)
+    % Get image with smallest voxel size and pick this image as reference
+    N       = numel(V_all);
+    prod_vx = zeros(1,N);
+    for n=1:N
+        vx         = spm_misc('vxsize',V_all(n).mat);
+        prod_vx(n) = prod(vx);
+    end    
+    [~,ref_ix] = min(prod_vx);
+    vx         = spm_misc('vxsize',V_all(ref_ix).mat);
+elseif numel(vx) == 1
+    vx = vx*ones(1,3);
 end
 
-fname = nii.dat.fname;
-resize_img(fname,vs,bb);
-nii   = nifti(fname);
+% Read input
+pth_img     = Nii.dat.fname;
+pth_spm_tpm = fullfile(spm('dir'),'tpm','TPM.nii,');
+
+% Get SPM TPM bounding box
+V_ref = spm_vol(pth_spm_tpm);
+bb    = world_bb(V_ref(1).mat,V_ref(1).dim);
+if keep_neck && ~isempty(V_all)
+    % Make sure neck is not cropped    
+    bb = adjust_bb_neck(bb,V_all);
+end
+
+% Do resizing
+resize_img(pth_img,vx,bb,deg);
+ 
+% Update NIfTI
+Nii = nifti(pth_img);
 %==========================================================================
 
 %==========================================================================
-function resize_img(imnames, Voxdim, BB, ismask)
+function resize_img(imnames, Voxdim, BB, deg, ismask)
 %  resize_img -- resample images to have specified voxel dims and BBox
 % resize_img(imnames, voxdim, bb, ismask)
 %
-% Output images will be prefixed with 'r', and will have voxel dimensions
-% equal to voxdim. Use NaNs to determine voxdims from transformation matrix
-% of input image(s).
-% If bb == nan(2,3), bounding box will include entire original image
-% Origin will move appropriately. Use world_bb to compute bounding box from
-% a different image.
-%
-% Pass ismask=true to re-round binary mask values (avoid
-% growing/shrinking masks due to linear interp)
-%
-% See also voxdim, world_bb
-
-% Based on John Ashburner's reorient.m
-% http://www.sph.umich.edu/~nichols/JohnsGems.html#Gem7
-% http://www.sph.umich.edu/~nichols/JohnsGems5.html#Gem2
-% Adapted by Ged Ridgway -- email bugs to drc.spm@gmail.com
-
-% This version doesn't check spm_flip_analyze_images -- the handedness of
-% the output image and matrix should match those of the input.
 
 % Check spm version:
 if exist('spm_select','file') % should be true for spm5
@@ -105,11 +114,15 @@ for V=vols'
     end
 
     if sum(bb(:,3)) == 0
-        offset = 20;
+        offset = 0;
         mn(2)  =  mn(2) + offset;
         mx(2)  =  mx(2) + offset;
     end
     
+%     if det(V.mat(1:3,1:3))<0
+%        voxdim(1) = -voxdim(1); 
+%     end
+
     % voxel [1 1 1] of output should map to BB mn
     % (the combination of matrices below first maps [1 1 1] to [0 0 0])
     mat = spm_matrix([mn 0 0 0 voxdim])*spm_matrix([-1 -1 -1]);
@@ -126,14 +139,8 @@ for V=vols'
     VO = spm_create_vol(VO);
     spm_progress_bar('Init',imgdim(3),'reslicing...','planes completed');
     for i = 1:imgdim(3)
-        
-        D = diag([-1 1 1 1]);
-        if det(V.mat(1:3,1:3)) < 0
-            D = diag([1 1 1 1]);
-        end
-
-        M = inv(spm_matrix([0 0 -i])*inv(VO.mat)*(D*V.mat));
-        img = spm_slice_vol(V, M, imgdim(1:2), 0); % (linear interp)
+        M = inv(spm_matrix([0 0 -i])*inv(VO.mat)*V.mat);
+        img = spm_slice_vol(V, M, imgdim(1:2), deg);
         if ismask
             img = round(img);
         end
@@ -154,32 +161,10 @@ disp('Done.')
 %==========================================================================
 
 %==========================================================================
-function bb = world_bb(V)
+function bb = world_bb(mat,dm)
 %  world-bb -- get bounding box in world (mm) coordinates
 
-d = V.dim(1:3);
-% corners in voxel-space
-c = [ 1    1    1    1
-    1    1    d(3) 1
-    1    d(2) 1    1
-    1    d(2) d(3) 1
-    d(1) 1    1    1
-    d(1) 1    d(3) 1
-    d(1) d(2) 1    1
-    d(1) d(2) d(3) 1 ]';
-% corners in world-space
-tc = V.mat(1:3,1:4)*c;
-
-% bounding box (world) min and max
-mn = min(tc,[],2)';
-mx = max(tc,[],2)';
-bb = [mn; mx];
-%==========================================================================
-
-%==========================================================================
-function bb = world_bb_par(d,mat)
-%  world-bb -- get bounding box in world (mm) coordinates
-
+d = dm(1:3);
 % corners in voxel-space
 c = [ 1    1    1    1
     1    1    d(3) 1
@@ -196,4 +181,36 @@ tc = mat(1:3,1:4)*c;
 mn = min(tc,[],2)';
 mx = max(tc,[],2)';
 bb = [mn; mx];
+%==========================================================================
+
+%==========================================================================
+function bb = adjust_bb_neck(bb,V)
+[mat,dm] = max_bb_orient(V,[1 1 1]);
+bb_max   = world_bb(mat,dm);
+bb(1,3)  = bb_max(1,3);    
+%==========================================================================
+
+%==========================================================================
+function [mat,dm] = max_bb_orient(V,vx)
+% Calculate orientation matrix and dimensions from maximum bounding-box
+% _______________________________________________________________________
+%  Copyright (C) 2018 Wellcome Trust Centre for Neuroimaging
+
+mn = [ Inf  Inf  Inf]';
+mx = [-Inf -Inf -Inf]';
+for i=1:numel(V)
+        d = V(i).dim;
+        if numel(d)==2, d(3) = 1; end
+
+        t = uint8(0:7);
+        c = diag(d+1)*double([bitshift(bitand(t,bitshift(uint8(1),1-1)),1-1)
+                              bitshift(bitand(t,bitshift(uint8(1),2-1)),1-2)
+                              bitshift(bitand(t,bitshift(uint8(1),3-1)),1-3)]);
+        c = bsxfun(@plus,V(i).mat(1:3,1:3)*c,V(i).mat(1:3,4));
+        mx = max(mx,max(c,[],2));
+        mn = min(mn,min(c,[],2));
+end
+mat = spm_matrix(mn-1)*diag([vx 1])*spm_matrix(-[1 1 1]);
+dm  = ceil((mat\[mx'+1 1]')');
+dm  = dm(1:3);
 %==========================================================================

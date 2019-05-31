@@ -1,17 +1,17 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/DELIRIUM/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/DELIRIUM",
-    "dir_2d":"/data/mbrud/populations/2d/DELIRIUM",
+    "dir_population":"/data/mbrud/populations/original/ROB",
+    "dir_preproc":"/data/mbrud/populations/preproc/spine-11/ROB",
+    "dir_2d":"/data/mbrud/populations/2d/spine-11/ROB",
     "write_2d":true,
+    "axis_2d":1,
     "S":"Inf",
     "preproc":{  
         "reset_origin":true,
-        "do_realign2mni":true,
         "do_crop":true,
-        "do_rem_neck":true,
-        "do_ds_throughplane":false,
-        "vx":1,
-        "do_denoise":true,
+        "do_rem_neck":false,
+        "do_realign2mni":true,
+        "vx":2,
+        "do_denoise":false,
     },
     "holly":{
         "mode":"qsub",
@@ -22,10 +22,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/DELIRIUM",
+            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/DELIRIUM",
+            "folder":"/data/mbrud/Holly/preprocess_images/ROB",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -34,7 +34,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

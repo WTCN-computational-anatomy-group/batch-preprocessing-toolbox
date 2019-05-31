@@ -1,19 +1,20 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/IXI/dat.mat",
-    "dir_preproc":"/data/mbrud/populations/preproc/IXI",
-    "dir_2d":"/data/mbrud/populations/2d/IXI",
+    "dir_population":"/data/mbrud/populations/original/ATLAS-LABELS",
+    "dir_preproc":"/data/mbrud/populations/preproc/haem/ATLAS-LABELS",
+    "dir_2d":"/data/mbrud/populations/2d/haem/ATLAS-LABELS",
     "write_2d":true,
     "S":"Inf",
     "preproc":{  
+        "reset_origin":true,
         "do_realign2mni":true,
         "do_crop":true,
         "do_rem_neck":true,
-        "do_coreg":true,
-        "do_reslice":true,
-        "vx":[],
+        "vx":1,
+        "do_denoise":true,
+        "den_after_vx":true,
     },
     "holly":{
-        "mode":"qsub",
+        "mode":"qsub",		
         "verbose":true,
         "clean":false,
         "clean_init":true,
@@ -21,10 +22,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/IXI",
+            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS-LABELS",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/IXI",
+            "folder":"/data/mbrud/Holly/preprocess_images/ATLAS-LABELS",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",
@@ -33,7 +34,7 @@
         },
         "job":{
             "est_mem":false,
-            "mem":"5G",
+            "mem":"8G",
         },
     },
 }

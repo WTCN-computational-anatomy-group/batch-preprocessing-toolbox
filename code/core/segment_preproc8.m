@@ -1,16 +1,16 @@
-function segment_preproc8(V,write_tc,write_bf,write_df,dir_out,modality)
+function segment_preproc8(V,write_tc,write_bf,write_df,dir_out,modality,opt)
 N = numel(V);
 
 obj          = struct;
 obj.bb       = NaN(2,3);
 obj.vox      = NaN;
 obj.affreg   = 'mni';
-obj.reg      = [0 0.001 0.5 0.05 0.2]*0.1;
+obj.reg      = [0 0.001 0.5 0.05 0.2]*opt.reg_def_mult;
 obj.fwhm     = 1;
-obj.samp     = 3;
+obj.samp     = opt.samp;
 obj.biasfwhm = 60*ones(1,N);
-obj.mrf      = 0;    
-obj.cleanup  = 0;
+obj.mrf      = opt.mrf;    
+obj.cleanup  = opt.cleanup;
 
 if strcmpi(modality,'CT')
     obj.biasreg  = 10; 
@@ -19,7 +19,7 @@ elseif strcmpi(modality,'MRI')
 end
 
 tpmname   = fullfile(spm('dir'),'tpm','TPM.nii');
-obj.lkp   = 1:6;
+obj.lkp   = opt.lkp;
 obj.tpm   = spm_load_priors8(tpmname);
 obj.image = V;
 

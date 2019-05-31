@@ -1,16 +1,16 @@
 {  
-    "dir_population":"/data/mbrud/populations/original/MRBrainS18-T1",
-    "dir_preproc":"/data/mbrud/populations/preproc/MRBrainS18-3class-T1",
-    "dir_2d":"/data/mbrud/populations/2d/MRBrainS18-3class-T1",
-    "write_2d":true,
+    "dir_population":"/data/mbrud/populations/original/ISBR20",
+    "dir_preproc":"/data/mbrud/populations/preproc/ISBR20",
+    "dir_2d":"/data/mbrud/populations/2d/ISBR20",
+    "write_2d":false,
     "S":"Inf",
     "preproc":{  
         "do_crop":true,
-        "do_rem_neck":true,
+        "do_rem_neck":false,
         "do_realign2mni":true,
-        "part_labels":[[0],[1,2,7],[3,4,8],[6]],
-        "vx":[],
-        "do_segment":true,        
+        "vx":1,
+        "part_labels":[[0],[192],[254]],
+        "do_segment":true,
     },
     "holly":{
         "mode":"qsub",
@@ -21,10 +21,10 @@
         "server":{
             "ip":"holly",
             "login":"mbrud",
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class-T1",
+            "folder":"/data/mbrud/Holly/preprocess_images/ISBR20",
         },
         "client":{
-            "folder":"/data/mbrud/Holly/preprocess_images/MRBrainS18-3class-T1",
+            "folder":"/data/mbrud/Holly/preprocess_images/ISBR20",
         },
         "matlab":{
             "bin":"/share/apps/matlabR2018a",

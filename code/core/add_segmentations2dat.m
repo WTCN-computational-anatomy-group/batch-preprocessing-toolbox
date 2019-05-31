@@ -3,11 +3,11 @@ function dat = add_segmentations2dat(dat)
 m = 1; % ...one modality...
 n = 1; % ...and one image per channel       
     
-% type   = {'c','rc','wc','mwc'};
-% tissue = {'GM','WM','CSF','BONE','ST','BG'};
+type   = {'c','rc','wc','mwc'};
+tissue = {'GM','WM','CSF','BONE','ST','BG'};
 
-type   = {'c'};
-tissue = {'GM','WM','CSF'};
+% type   = {'c'};
+% tissue = {'GM','WM','CSF'};
 
 T = numel(type);
 K = numel(tissue);
@@ -39,6 +39,9 @@ for t=1:T
     for k=1:K        
         [pth,nam,ext] = fileparts(fname);
         fname1        = fullfile(pth,[type{t} num2str(k) nam ext]);
+        if ~(exist(fname1,'file')==2)
+            break
+        end
         Nii           = nifti(fname1);
         
         dat.segmentation{t}.class_map(tissue{k}) = k;

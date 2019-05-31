@@ -39,9 +39,11 @@ end
 if ~isfield(job,'axis_2d')
     job.axis_2d = 3;
 end    
+if ~isfield(job,'channel')
+    job.channel = {};
+end 
 
-% Pre-processing parameters
-%----------------------------------------------------------------------
+% Preprocessing specific
 if ~isfield(job,'preproc')
     job.preproc = struct;
 end
@@ -81,11 +83,8 @@ end
 if ~isfield(job.preproc,'do_denoise')
     job.preproc.do_denoise = false;
 end    
-if ~isfield(job.preproc,'vx')
-    job.preproc.vx = [];
-end
-if ~isfield(job.preproc,'deg')
-    job.preproc.deg = 0;
+if ~isfield(job.preproc,'deg_2d')
+    job.preproc.deg_2d = 0;
 end
 if ~isfield(job.preproc,'do_normalise_intensities')
     job.preproc.do_normalise_intensities = false;
@@ -96,37 +95,114 @@ end
 if ~isfield(job.preproc,'do_skull_strip')
     job.preproc.do_skull_strip = false;
 end
-if ~isfield(job.preproc,'do_segment')
-    job.preproc.do_segment = false;
-end
 if ~isfield(job.preproc,'part_labels')
     job.preproc.part_labels = {};
 end
 if ~isfield(job.preproc,'reslice2channel')
     job.preproc.reslice2channel = '';
 end
-if ~isfield(job.preproc,'resize')
-    job.preproc.resize = false;
-end
 if ~isfield(job.preproc,'reslice_labels')
     job.preproc.reslice_labels = false;
 end
-
-% Holly stuff
-%----------------------------------------------------------------------
-if ~isfield(job,'holly')
-    holly = struct;
-else
-    holly = job.holly;
+if ~isfield(job.preproc,'mc_denoise')
+    job.preproc.mc_denoise = false;
+end
+if ~isfield(job.preproc,'mc_superres')
+    job.preproc.mc_superres = true;
+end
+if ~isfield(job.preproc,'deg_res')
+    job.preproc.deg_res = 1;
+end
+if ~isfield(job.preproc,'deg_ro')
+    job.preproc.deg_ro = 1;
+end
+if ~isfield(job.preproc,'mtv_workers')
+    job.preproc.mtv_workers = 0;
+end
+if ~isfield(job.preproc,'den_after_vx')
+    job.preproc.den_after_vx = false;
 end
 
-if     test_level==1, holly.mode = 'for';
-elseif test_level==2, holly.mode = 'parfor';
+% Resize
+if ~isfield(job.preproc,'resize')
+    job.preproc.resize = struct;
+end
+if ~isfield(job.preproc.resize,'do')
+    job.preproc.resize.do = false;
+end
+if ~isfield(job.preproc.resize,'deg')
+    job.preproc.resize.deg = 4;
+end
+if ~isfield(job.preproc.resize,'vx')
+    job.preproc.resize.vx = [];
+end
+if ~isfield(job.preproc.resize,'keep_neck')
+    job.preproc.resize.keep_neck = true;
+end
+if ~isfield(job.preproc,'vx')
+    job.preproc.vx = [];
 end
 
-holly = distribute_default(holly);
+% Labels
+if ~isfield(job.preproc,'labels')
+    job.preproc.labels = struct;
+end
+if ~isfield(job.preproc.labels,'part')
+    job.preproc.labels.part = [];
+end
+if ~isfield(job.preproc.labels,'ref')
+    job.preproc.labels.ref = '';
+end
 
-if isfield(holly,'translate') && size(holly.translate,1) > 1   
-    holly.translate = holly.translate';    
+% Segmentation specific
+if ~isfield(job,'segment')
+    job.segment = struct;
+end
+if ~isfield(job.segment,'do')
+    job.segment.do = false;
+end
+if ~isfield(job.segment,'tc')
+    job.segment.tc = false(6,4);
+end
+if ~isfield(job.segment,'df')
+    job.segment.df = [false false false];
+end
+if ~isfield(job.segment,'bf')
+    job.segment.bf = [false false];
+end
+if ~isfield(job.segment,'lkp')
+    job.segment.lkp = [1 1 2 2 3 3 4 4 5 5 5 6 6];
+end
+if ~isfield(job.segment,'reg_def_mult')
+    job.segment.reg_def_mult = 0.1;
+end
+if ~isfield(job.segment,'cleanup')
+    job.segment.cleanup = true;
+end
+if ~isfield(job.segment,'mrf')
+    job.segment.mrf = 2;
+end
+if ~isfield(job.segment,'samp')
+    job.segment.samp = 3;
+end
+
+if nargout > 1
+    % Holly stuff
+    %----------------------------------------------------------------------
+    if ~isfield(job,'holly')
+        holly = struct;
+    else
+        holly = job.holly;
+    end
+
+    if     test_level==1, holly.mode = 'for';
+    elseif test_level==2, holly.mode = 'parfor';
+    end
+
+    holly = distribute_default(holly);
+
+    if isfield(holly,'translate') && size(holly.translate,1) > 1   
+        holly.translate = holly.translate';    
+    end
 end
 %==========================================================================
